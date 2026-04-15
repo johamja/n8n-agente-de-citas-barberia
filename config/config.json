@@ -1,0 +1,147 @@
+{
+  "negocio": {
+    "nombre": "Barberia Alex",
+    "telefono": "3334324220",
+    "direccion": "Samaniego por la calle al puente colgante",
+    "ciudad": "Samaniego",
+    "barberos": 3,
+    "maxClientesSim": 3,
+    "estacionamiento": "Frente del local"
+  },
+
+  "horarios": {
+    "lunes": {"apertura": "09:00", "cierre": "18:00", "descanso": "12:00-14:00"},
+    "martes": {"apertura": "09:00", "cierre": "18:00", "descanso": "12:00-14:00"},
+    "miercoles": {"apertura": "09:00", "cierre": "18:00", "descanso": "12:00-14:00"},
+    "jueves": {"apertura": "09:00", "cierre": "18:00", "descanso": "12:00-14:00"},
+    "viernes": {"apertura": "09:00", "cierre": "18:00", "descanso": "12:00-14:00"},
+    "sabado": {"apertura": "10:00", "cierre": "18:00", "descanso": "12:00-14:00"},
+    "domingo": {"cerrado": true},
+    "intervaloMinimo": 15,
+    "citasMaxPorDia": 8,
+    "anticipacionMinima": 20,
+    "cancelacionHoras": 2
+  },
+
+  "servicios": [
+    {
+      "id": "corte_basico",
+      "nombre": "Corte de Cabello",
+      "precio": 20000,
+      "duracion": 30,
+      "disponible": true
+    },
+    {
+      "id": "corte_barba",
+      "nombre": "Corte + Barba",
+      "precio": 30000,
+      "duracion": 45,
+      "disponible": true
+    },
+    {
+      "id": "corte_ninos",
+      "nombre": "Corte para Niños",
+      "precio": 20000,
+      "duracion": 25,
+      "disponible": true
+    },
+    {
+      "id": "afeitado",
+      "nombre": "Afeitado Tradicional",
+      "precio": 10000,
+      "duracion": 20,
+      "disponible": true
+    },
+    {
+      "id": "diseno_barba",
+      "nombre": "Diseño de Barba",
+      "precio": 15000,
+      "duracion": 20,
+      "disponible": true
+    },
+    {
+      "id": "tratamiento_capilar",
+      "nombre": "Tratamiento Capilar Premium",
+      "precio": 40000,
+      "duracion": 15,
+      "disponible": true,
+      "extra": true
+    },
+    {
+      "id": "masaje_cuero",
+      "nombre": "Masaje de Cuero Cabelludo",
+      "precio": 5000,
+      "duracion": 5,
+      "disponible": true,
+      "extra": true
+    }
+  ],
+
+  "politicas": {
+    "cancelacion": {
+      "hasta_horas_antes": 2,
+      "costo": "sin_costo",
+      "tiempo_espera_max": 15
+    },
+    "no_asiste": {
+      "max_sin_penalizacion": 3,
+      "accion_despues": "pago_adelantado_sin_devolucion",
+      "libera_espacio": true
+    },
+    "reprogramacion": {
+      "permitida_hasta_horas": 24,
+      "costo": "sin_costo",
+      "max_por_cita": 2
+    },
+    "confirmacion": {
+      "recordatorio_horas": 2,
+      "metodo": "whatsapp"
+    },
+    "privacidad": {
+      "datos_recolectados": ["nombre", "telefono", "servicios", "preferencias"],
+      "retencion_meses": 2
+    }
+  },
+
+  "metodos_pago": [
+    {"nombre": "Efectivo", "disponible": true},
+    {"nombre": "Transferencia bancaria", "disponible": true, "bancos": ["Bancolombia", "Nequi", "NU"]}
+  ],
+
+  "canales_comunicacion": {
+    "whatsapp": true,
+    "telegram": false,
+    "llamadas": true,
+    "email": false
+  },
+
+  "personal": [
+    {"nombre": "Alex", "lun": true, "mar": true, "mie": true, "jue": true, "vie": true, "sab": true, "dom": false},
+    {"nombre": "Yomar", "lun": true, "mar": true, "mie": false, "jue": true, "vie": true, "sab": true, "dom": false},
+    {"nombre": "Kevin", "lun": true, "mar": true, "mie": true, "jue": true, "vie": true, "sab": false, "dom": false}
+  ],
+
+  "faq": {
+    "ubicacion": "Samaniego por la calle al puente colgante",
+    "telefono_contacto": "3334324220",
+    "trabajos_personalizados": true,
+    "pago_adelantado": true,
+    "agendar_multiples": true,
+    "propinas": "Aceptamos propina en efectivo"
+  },
+
+  "integraciones": {
+    "google_calendar": {
+      "habilitada": false,
+      "config_required": ["GOOGLE_CALENDAR_API_KEY", "GOOGLE_CALENDAR_ID"]
+    },
+    "whatsapp": {
+      "habilitada": false,
+      "config_required": ["WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_ACCESS_TOKEN"]
+    },
+    "telegram": {
+      "habilitada": false,
+      "config_required": ["TELEGRAM_BOT_TOKEN"]
+    }
+  }
+}

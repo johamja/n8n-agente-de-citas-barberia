@@ -1,0 +1,450 @@
+{
+  "name": "02 - Herramienta Citas Google Calendar",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "9c125b15-987e-404b-81dd-1cf02deffa56",
+      "name": "Entrada Herramienta",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\n// Helper: toma el primer valor \"util\" descartando undefined/null/vacios y la cadena literal \"undefined\"/\"null\"\nconst pick = (...vals) => {\n  for (const v of vals) {\n    if (v === undefined || v === null) continue;\n    const s = String(v).trim();\n    if (!s) continue;\n    const low = s.toLowerCase();\n    if (low === 'undefined' || low === 'null') continue;\n    return s;\n  }\n  return '';\n};\n\n// Parsear query tipo: \"Nombre: Joham, Servicio: Corte + Barba, Fecha: 2026-04-15, Hora: 09:00\"\nconst query = typeof item.query === 'string' ? item.query : '';\nconst parsed = {};\nfor (const part of query.split(',').map(p => p.trim())) {\n  const colonIdx = part.indexOf(':');\n  if (colonIdx === -1) continue;\n  const rawKey = part.substring(0, colonIdx).trim().toLowerCase()\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''); // quitar tildes\n  const value = part.substring(colonIdx + 1).trim();\n  parsed[rawKey] = value;\n}\n\n// Para los campos que el LLM suele emitir como query: parsed gana sobre item (evita que \"undefined\" contamine).\nconst nombre   = pick(parsed.nombre,   item.nombre);\nconst servicio = pick(parsed.servicio, item.servicio);\nconst fecha    = pick(parsed.fecha,    item.fecha);\nconst hora     = pick(parsed.hora,     item.hora);\nconst numero   = pick(parsed.numero,   item.numero);\n\n// accion viene fija desde el flujo 01 via expresion; item gana sobre parsed.\nlet accion = pick(item.accion, parsed.accion).toLowerCase();\nif (!accion) {\n  if (servicio && hora)         accion = 'agendar';\n  else if (nombre && !servicio) accion = 'cancelar';\n  else                          accion = 'consultar';\n}\n\nreturn [{\n  json: { accion, nombre, servicio, fecha, hora, numero }\n}];"
+      },
+      "id": "7ec67d20-cec3-478a-86e8-c4a2e2a77012",
+      "name": "Parsear Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.accion }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "agendar"
+            },
+            {
+              "value2": "cancelar",
+              "output": 1
+            },
+            {
+              "value2": "consultar",
+              "output": 2
+            }
+          ]
+        },
+        "fallbackOutput": 3
+      },
+      "id": "dac64832-c440-474f-a828-212493204a9f",
+      "name": "Tipo de Accion",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const accion = $input.first().json.accion || '(vacia)';\nreturn [{ json: { resultado: `No se reconocio la accion: ${accion}. Valores validos: agendar, cancelar, consultar.` } }];"
+      },
+      "id": "6aa09aef-7b6a-4bc7-9dd7-435a797eb47c",
+      "name": "Accion Desconocida",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const duraciones = {\n  'corte': 30, 'corte de cabello': 30,\n  'corte + barba': 45, 'corte barba': 45, 'corte+barba': 45,\n  'corte ninos': 25, 'corte niños': 25, 'ninos': 25, 'niños': 25,\n  'afeitado': 20, 'afeitado tradicional': 20,\n  'diseno barba': 20, 'diseño barba': 20, 'diseño de barba': 20,\n  'tratamiento': 45, 'tratamiento capilar': 45,\n  'masaje': 35, 'masaje cuero cabelludo': 35\n};\n\nconst item = $input.first().json;\n\n// Validar datos minimos: si falta fecha, hora, nombre o servicio, retornar resultado claro sin tocar el calendario\nconst falta = [];\nif (!item.fecha)    falta.push('fecha');\nif (!item.hora)     falta.push('hora');\nif (!item.nombre)   falta.push('nombre');\nif (!item.servicio) falta.push('servicio');\nif (falta.length) {\n  return [{ json: { ...item, _error: true, resultado: `Faltan datos para agendar: ${falta.join(', ')}.` } }];\n}\n\nconst servicio = item.servicio.toLowerCase();\nconst duracion = duraciones[servicio] || 30;\n\nconst fechaHora = `${item.fecha}T${item.hora}:00`;\nconst inicio = new Date(fechaHora);\nif (isNaN(inicio.getTime())) {\n  return [{ json: { ...item, _error: true, resultado: `Fecha u hora invalidas: ${item.fecha} ${item.hora}.` } }];\n}\nconst fin = new Date(inicio.getTime() + duracion * 60000);\n\nconst pad = n => String(n).padStart(2, '0');\nconst finStr = `${fin.getFullYear()}-${pad(fin.getMonth()+1)}-${pad(fin.getDate())}T${pad(fin.getHours())}:${pad(fin.getMinutes())}:00`;\n\nreturn [{\n  json: {\n    ...item,\n    duracion,\n    fechaHoraInicio: fechaHora,\n    fechaHoraFin: finStr,\n    titulo: `Cita: ${item.servicio} - ${item.nombre}`,\n    descripcion: `Cliente: ${item.nombre}\\nTel: ${item.numero || 'N/A'}\\nServicio: ${item.servicio}`\n  }\n}];"
+      },
+      "id": "0701850c-1dbe-4d68-8eed-8a07de592928",
+      "name": "Calcular Fin Cita",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "2459bef762ad2732d5580071803dba0e5cebfd1cdc31e8a94f690338c41d2a47@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "n8n"
+        },
+        "start": "={{ $json.fechaHoraInicio }}",
+        "end": "={{ $json.fechaHoraFin }}",
+        "additionalFields": {
+          "description": "={{ $json.descripcion }}",
+          "summary": "={{ $json.titulo }}"
+        }
+      },
+      "id": "fc0ef66d-ee0c-4410-9972-06c4e4ee8318",
+      "name": "Crear Evento Calendar",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -304,
+        -80
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6xRf5UKeNHj50xrV",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst inicio = item.start?.dateTime || item.fechaHoraInicio || '';\nreturn [{\n  json: {\n    resultado: `Cita confirmada: ${item.summary || item.titulo}. Inicio: ${inicio}.`\n  }\n}];"
+      },
+      "id": "d5f8c40c-2f5c-45c0-8f80-ab0a4f225169",
+      "name": "Respuesta Agendar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "2459bef762ad2732d5580071803dba0e5cebfd1cdc31e8a94f690338c41d2a47@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "n8n"
+        },
+        "returnAll": true,
+        "timeMin": "={{ $json.fecha }}T00:00:00",
+        "timeMax": "={{ $json.fecha }}T23:59:59",
+        "options": {
+          "query": "={{ $json.nombre }}"
+        }
+      },
+      "id": "75cdfe8d-0bfb-4b44-908e-73d9382a23bb",
+      "name": "Buscar Cita Cliente",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -528,
+        112
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6xRf5UKeNHj50xrV",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const eventos = $input.all();\nconst entrada = $('Parsear Datos').item.json;\n\nconst ahora = new Date();\nconst limite = new Date(ahora.getTime() + 2 * 60 * 60 * 1000);\n\nif (eventos.length === 0) {\n  return [{ json: { resultado: 'No se encontro ninguna cita para ' + (entrada.nombre || 'el cliente') + ' en esa fecha.', citaId: null } }];\n}\n\nconst evento = eventos[0].json;\nconst inicioCita = new Date(evento.start?.dateTime || evento.start?.date);\n\nif (inicioCita < limite) {\n  return [{ json: { resultado: 'No se puede cancelar. La cita es en menos de 2 horas. Llama al 3334324220.', citaId: null } }];\n}\n\nreturn [{ json: { resultado: 'ok', citaId: evento.id, resumen: evento.summary } }];"
+      },
+      "id": "4132e432-25f4-4914-9311-6da6a685aaee",
+      "name": "Verificar y Eliminar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.citaId }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "36012768-4db6-4169-9c32-a396376fb200",
+      "name": "Tiene Cita",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "2459bef762ad2732d5580071803dba0e5cebfd1cdc31e8a94f690338c41d2a47@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "n8n"
+        },
+        "eventId": "={{ $json.citaId }}",
+        "options": {}
+      },
+      "id": "bd368dd9-caa7-4536-924a-f4510aca2bc6",
+      "name": "Eliminar Evento",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        144,
+        16
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6xRf5UKeNHj50xrV",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const resumen = $('Verificar y Eliminar').item.json.resumen || 'la cita';\nreturn [{ json: { resultado: `Cita cancelada: ${resumen}. El espacio queda disponible.` } }];"
+      },
+      "id": "a82881b9-d4c3-4ea1-96ea-970f06e80f8d",
+      "name": "Respuesta Cancelar OK",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $('Verificar y Eliminar').item.json.resultado;\nreturn [{ json: { resultado: msg } }];"
+      },
+      "id": "0a4e9783-d166-40cd-817e-c93ebfd9a4aa",
+      "name": "Respuesta Cancelar NO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "2459bef762ad2732d5580071803dba0e5cebfd1cdc31e8a94f690338c41d2a47@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "n8n"
+        },
+        "returnAll": true,
+        "timeMin": "={{ $json.fecha }}T00:00:00",
+        "timeMax": "={{ $json.fecha }}T23:59:59",
+        "options": {}
+      },
+      "id": "8b8c5d53-fadf-484d-8a09-5657f2ffb657",
+      "name": "Listar Eventos Dia",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -528,
+        304
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "6xRf5UKeNHj50xrV",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const eventos = $input.all().map(e => e.json);\nconst fecha = $('Parsear Datos').item.json.fecha;\n\nconst slots = [];\nconst turnos = [\n  { inicio: 8, fin: 12 },\n  { inicio: 14, fin: 18 }\n];\n\nfor (const turno of turnos) {\n  for (let h = turno.inicio; h < turno.fin; h++) {\n    slots.push(`${String(h).padStart(2,'0')}:00`);\n    slots.push(`${String(h).padStart(2,'0')}:30`);\n  }\n}\n\nconst ocupados = eventos.map(e => {\n  const dt = new Date(e.start?.dateTime || e.start?.date);\n  return `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;\n});\n\nconst libres = slots.filter(s => !ocupados.includes(s));\n\nconst respuesta = libres.length > 0\n  ? `Horarios disponibles el ${fecha}: ` + libres.join(', ')\n  : `No hay horarios disponibles el ${fecha}. Elige otra fecha.`;\n\nreturn [{ json: { resultado: respuesta } }];"
+      },
+      "id": "dafcd949-5a9c-4050-9296-93b84915f3d3",
+      "name": "Calcular Disponibilidad",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        304
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Entrada Herramienta": {
+      "main": [
+        [
+          {
+            "node": "Parsear Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Datos": {
+      "main": [
+        [
+          {
+            "node": "Tipo de Accion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de Accion": {
+      "main": [
+        [
+          {
+            "node": "Calcular Fin Cita",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Cita Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Listar Eventos Dia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Accion Desconocida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Fin Cita": {
+      "main": [
+        [
+          {
+            "node": "Crear Evento Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Evento Calendar": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Agendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Cita Cliente": {
+      "main": [
+        [
+          {
+            "node": "Verificar y Eliminar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar y Eliminar": {
+      "main": [
+        [
+          {
+            "node": "Tiene Cita",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tiene Cita": {
+      "main": [
+        [
+          {
+            "node": "Eliminar Evento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Cancelar NO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eliminar Evento": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Cancelar OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Eventos Dia": {
+      "main": [
+        [
+          {
+            "node": "Calcular Disponibilidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "b6d29d0e-e8dd-4174-b7f9-2e9d22e94cbc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6948377d4c74747a8c6fcaab5db2c8cdcae1b2467cadfae487118881de798aaa"
+  },
+  "id": "umUrlrSjsantg3Xx",
+  "tags": [
+    {
+      "updatedAt": "2026-04-15T00:37:53.302Z",
+      "createdAt": "2026-04-15T00:37:53.302Z",
+      "id": "m3Bfvdwsx96EpKSP",
+      "name": "barberia"
+    }
+  ]
+}
