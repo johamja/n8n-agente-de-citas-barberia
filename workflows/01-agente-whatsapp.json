@@ -19,10 +19,33 @@
     },
     {
       "parameters": {
-        "promptType": "define",
-        "text": "={{ $json.texto }}",
+        "operation": "executeQuery",
+        "query": "INSERT INTO clientes (numero) VALUES ($1) ON CONFLICT (numero) DO UPDATE SET ultima_interaccion = NOW() RETURNING id, numero, nombre, total_citas",
         "options": {
-          "systemMessage": "=Eres el asistente de atencion al cliente de Barberia Alex en Samaniego, Colombia.\n\nDATA DEL NEGOCIO:\n- Dir: Samaniego por la calle al puente colgante\n- Tel: 3334324220\n- Horarios: Lun-Vie 08:00-12:00 y 14:00-18:00 | Sab 10:00-12:00 y 14:00-18:00 | Dom cerrado\n- Descanso: 12:00-14:00\n- Festivos: cerrado\n- Max 8 citas/dia, 3 simultaneas, anticipacion minima 20 min\n\nSERVICIOS:\n- Corte $20.000 (30 min)\n- Corte+Barba $30.000 (45 min)\n- Corte Ninos $20.000 (25 min)\n- Afeitado $10.000 (20 min)\n- Diseno Barba $15.000 (20 min)\n- Tratamiento Capilar $40.000 (+15 min)\n- Masaje Cuero Cabelludo $5.000 (+5 min)\n\nPAGO: Efectivo, Bancolombia, Nequi, NU\n\nPOLITICAS:\n- Cancelar: sin costo si faltan 2+ horas\n- 3 no-shows: pago adelantado sin devolucion\n- Sin cita: si, segun disponibilidad\n- Recordatorio: WhatsApp 2h antes\n\nINSTRUCCIONES:\n1. AGENDAR (palabras: cita, agendar, turno, reservar): pide nombre, servicio, fecha, hora. Luego usa herramienta agendar_cita.\n2. CANCELAR (palabras: cancelar, anular, quitar): pide nombre y fecha. Usa herramienta cancelar_cita.\n3. DISPONIBILIDAD (palabras: hay espacio, cuando puedo, cuales horas): usa herramienta consultar_disponibilidad.\n4. INFORMACION (precio, horario, donde, servicios): responde directamente.\n\nREGLAS:\n- Sin emojis\n- Amable y profesional\n- Confirma datos antes de ejecutar herramienta\n- No reveles datos de otros clientes\n- Si no puedes resolver, deriva al 3334324220\n- El cliente que escribe tiene numero: {{ $('Extraer Mensaje').item.json.numero }}"
+          "queryReplacement": "={{ $('Extraer Mensaje').item.json.numero }}"
+        }
+      },
+      "id": "a1b2c3d4-e5f6-4890-abcd-ef1234567890",
+      "name": "Registrar Cliente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1152,
+        -320
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres Barberia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Extraer Mensaje').item.json.texto }}",
+        "options": {
+          "systemMessage": "=Eres el asistente virtual de atencion al cliente de Barberia Alex en Samaniego, Colombia. Responde unicamente sobre temas relacionados con la barberia.\n\nNEGOCIO:\n- Nombre: Barberia Alex\n- Telefono: 3334324220\n- Direccion: Samaniego por la calle al puente colgante\n- Ciudad: Samaniego\n- Barberos: 3\n- Max clientes simultaneos: 3\n- Estacionamiento: Frente del local\n\nHORARIOS:\n- Lunes a viernes: 09:00 - 18:00 (descanso 12:00 - 14:00)\n- Sabado: 10:00 - 18:00 (descanso 12:00 - 14:00)\n- Domingo: cerrado\n- Intervalo minimo entre citas: 15 min\n- Max citas por dia: 8\n- Anticipacion minima para agendar: 20 min\n- Cancelacion gratuita hasta: 2 horas antes\n\nPERSONAL Y DISPONIBILIDAD:\n- Alex: lunes, martes, miercoles, jueves, viernes, sabado\n- Yomar: lunes, martes, jueves, viernes, sabado\n- Kevin: lunes, martes, miercoles, jueves, viernes\n\nSERVICIOS:\n- Corte de Cabello: $20.000 - 30 min\n- Corte + Barba: $30.000 - 45 min\n- Corte para Ninos: $20.000 - 25 min\n- Afeitado Tradicional: $10.000 - 20 min\n- Diseno de Barba: $15.000 - 20 min\n- Tratamiento Capilar Premium (adicional): $40.000 - 15 min\n- Masaje de Cuero Cabelludo (adicional): $5.000 - 5 min\n\nMETODOS DE PAGO:\n- Efectivo\n- Transferencia bancaria: Bancolombia, Nequi, NU\n- Propinas: aceptadas en efectivo\n\nPOLITICAS:\n- Cancelacion: sin costo si se realiza 2 o mas horas antes. Tiempo de espera maximo 15 min.\n- Inasistencias: hasta 3 sin penalizacion. Desde la 4ta se requiere pago adelantado sin devolucion.\n- Reprogramacion: permitida hasta 24 horas antes, sin costo, maximo 2 veces por cita.\n- Recordatorio: por WhatsApp 2 horas antes de la cita.\n- Privacidad: se guardan nombre, telefono, servicios y preferencias durante 2 meses.\n\nCANALES DE ATENCION:\n- WhatsApp: si\n- Llamadas: si\n- Telegram: no\n- Email: no\n\nCLIENTE ACTUAL:\n- Numero: {{ $('Extraer Mensaje').item.json.numero }}\n- Nombre registrado: {{ $('Registrar Cliente').item.json.nombre || 'NO REGISTRADO' }}\n- Total citas previas: {{ $('Registrar Cliente').item.json.total_citas || 0 }}\n\nINSTRUCCIONES:\n1. SALUDO:\n   - Si el cliente tiene nombre registrado, saludale por su nombre.\n   - Si NO esta registrado (NO REGISTRADO), pidele su nombre de forma natural antes de continuar con su solicitud y usa la herramienta guardar_cliente para guardarlo.\n2. AGENDAR (cita, agendar, turno, reservar): usa el nombre ya registrado (no lo pidas de nuevo) y solicita servicio, fecha y hora. Luego usa herramienta agendar_cita.\n3. CANCELAR (cancelar, anular, quitar): pide la fecha de la cita. Usa herramienta cancelar_cita.\n4. DISPONIBILIDAD (hay espacio, cuando puedo, cuales horas): usa herramienta consultar_disponibilidad.\n5. INFORMACION (precio, horario, donde, servicios): responde directamente con los datos de arriba.\n\nREGLAS:\n- Sin emojis\n- Amable y profesional\n- Si el cliente ya tiene nombre registrado, NO se lo vuelvas a preguntar\n- Solo usa guardar_cliente la primera vez que obtengas el nombre o si el cliente pide cambiarlo\n- Confirma los datos antes de ejecutar cualquier herramienta de agendar/cancelar\n- No reveles datos de otros clientes\n- Si no puedes resolver, deriva al 3334324220"
         }
       },
       "id": "7409d2fe-b40d-4f34-a922-fadb3b0d2f93",
@@ -38,16 +61,23 @@
       "parameters": {
         "sessionIdType": "customKey",
         "sessionKey": "={{ $('Extraer Mensaje').item.json.sessionId }}",
-        "contextWindowLength": 10
+        "contextWindowLength": 5,
+        "tableName": "n8n_chat_histories"
       },
       "id": "793ea5b9-a625-4ec6-b14c-9d51c50c6de3",
       "name": "Memoria",
-      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
       "position": [
         1264,
         -112
-      ]
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres Barberia"
+        }
+      }
     },
     {
       "parameters": {
@@ -126,6 +156,38 @@
       "typeVersion": 1.1,
       "position": [
         1584,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "name": "guardar_cliente",
+        "description": "Guarda o actualiza el nombre del cliente en la base de datos. Usar cuando el cliente da su nombre por primera vez o pide cambiarlo. Requiere: nombre (string).",
+        "workflowId": "umUrlrSjsantg3Xx",
+        "responsePropertyName": "resultado",
+        "fields": {
+          "values": [
+            {
+              "name": "accion",
+              "stringValue": "={{ 'guardar_cliente' }}"
+            },
+            {
+              "name": "numero",
+              "stringValue": "={{ $('Extraer Mensaje').item.json.numero }}"
+            },
+            {
+              "name": "nombre",
+              "stringValue": "={{ $fromAI('nombre', 'Nombre completo del cliente', 'string') }}"
+            }
+          ]
+        }
+      },
+      "id": "b2c3d4e5-f6a7-4901-bcde-f23456789012",
+      "name": "Tool Guardar Cliente",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1900,
         -96
       ]
     },
@@ -297,7 +359,29 @@
         ]
       ]
     },
+    "Tool Guardar Cliente": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Barberia",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Extraer Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Registrar Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Cliente": {
       "main": [
         [
           {

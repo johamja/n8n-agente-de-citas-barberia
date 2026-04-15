@@ -27,29 +27,108 @@
     },
     {
       "parameters": {
-        "dataType": "string",
-        "value1": "={{ $json.accion }}",
+        "mode": "rules",
         "rules": {
-          "rules": [
+          "values": [
             {
-              "value2": "agendar"
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "agendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "agendar"
             },
             {
-              "value2": "cancelar",
-              "output": 1
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "cancelar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cancelar"
             },
             {
-              "value2": "consultar",
-              "output": 2
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "consultar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "consultar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "guardar_cliente",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "guardar_cliente"
             }
           ]
         },
-        "fallbackOutput": 3
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "desconocida"
+        }
       },
       "id": "dac64832-c440-474f-a828-212493204a9f",
       "name": "Tipo de Accion",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 1,
+      "typeVersion": 3.2,
       "position": [
         -752,
         176
@@ -272,6 +351,42 @@
     },
     {
       "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clientes SET nombre = $1 WHERE numero = $2 RETURNING nombre, numero",
+        "options": {
+          "queryReplacement": "={{ $json.nombre }},={{ $json.numero }}"
+        }
+      },
+      "id": "c3d4e5f6-a7b8-4012-cdef-345678901234",
+      "name": "Actualizar Nombre Cliente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -528,
+        640
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres Barberia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst nombre = item.nombre || 'cliente';\nreturn [{ json: { resultado: `Nombre guardado correctamente: ${nombre}.` } }];"
+      },
+      "id": "d4e5f6a7-b8c9-4123-def0-456789012345",
+      "name": "Respuesta Guardar Cliente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        640
+      ]
+    },
+    {
+      "parameters": {
         "jsCode": "const eventos = $input.all().map(e => e.json);\nconst fecha = $('Parsear Datos').item.json.fecha;\n\nconst slots = [];\nconst turnos = [\n  { inicio: 8, fin: 12 },\n  { inicio: 14, fin: 18 }\n];\n\nfor (const turno of turnos) {\n  for (let h = turno.inicio; h < turno.fin; h++) {\n    slots.push(`${String(h).padStart(2,'0')}:00`);\n    slots.push(`${String(h).padStart(2,'0')}:30`);\n  }\n}\n\nconst ocupados = eventos.map(e => {\n  const dt = new Date(e.start?.dateTime || e.start?.date);\n  return `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;\n});\n\nconst libres = slots.filter(s => !ocupados.includes(s));\n\nconst respuesta = libres.length > 0\n  ? `Horarios disponibles el ${fecha}: ` + libres.join(', ')\n  : `No hay horarios disponibles el ${fecha}. Elige otra fecha.`;\n\nreturn [{ json: { resultado: respuesta } }];"
       },
       "id": "dafcd949-5a9c-4050-9296-93b84915f3d3",
@@ -333,7 +448,25 @@
         ],
         [
           {
+            "node": "Actualizar Nombre Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Accion Desconocida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Nombre Cliente": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Guardar Cliente",
             "type": "main",
             "index": 0
           }

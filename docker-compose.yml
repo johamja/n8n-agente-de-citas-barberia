@@ -46,6 +46,7 @@ services:
       N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD}
     volumes:
       - n8n_data:/home/node/.n8n
+      - ./agent-context:/home/node/.n8n-files/agent-context:ro
     networks:
       - barberia-net
 

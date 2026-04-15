@@ -11,12 +11,13 @@
 
 Ir a: Settings → Variables
 
-| Variable | Descripción |
-|----------|-------------|
-| `EVOLUTION_API_URL` | URL base de Evolution API (ej: http://localhost:8080) |
-| `EVOLUTION_INSTANCE` | Nombre de tu instancia en Evolution |
-| `EVOLUTION_API_KEY` | API Key de Evolution |
-| `GOOGLE_CALENDAR_ID` | ID del calendario de citas |
+| Variable             | Descripción                                           |
+| -------------------- | ----------------------------------------------------- |
+| `EVOLUTION_API_URL`  | URL base de Evolution API (ej: http://localhost:8080) |
+| `EVOLUTION_INSTANCE` | Nombre de tu instancia en Evolution                   |
+| `EVOLUTION_API_KEY`  | API Key de Evolution                                  |
+| `GOOGLE_CALENDAR_ID` | ID del calendario de citas                            |
+|                      |                                                       |
 
 ## Credenciales Necesarias en n8n
 
