@@ -7,13 +7,13 @@
         "path": "whatsapp-barberia",
         "options": {}
       },
-      "id": "cd74654e-66df-4ebd-9861-f49bddc9a31b",
+      "id": "fdcbafe4-d286-4bd2-b076-e43d7d830196",
       "name": "Webhook Evolution",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        11520,
-        2592
+        12880,
+        2544
       ],
       "webhookId": "barberia-whatsapp-001"
     },
@@ -25,13 +25,13 @@
           "queryReplacement": "={{ $('Extraer Mensaje').item.json.numero }}"
         }
       },
-      "id": "abfb3e21-bc9c-4c6f-9304-849eff6d8cb6",
+      "id": "4d242372-eb67-4485-826a-705a4b0d3cac",
       "name": "Registrar Cliente",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        11968,
-        2592
+        13328,
+        2544
       ],
       "credentials": {
         "postgres": {
@@ -44,13 +44,13 @@
       "parameters": {
         "jsCode": "// Fecha y hora actual del servidor n8n en zona America/Bogota.\n// Expone multiples formatos para que el agente los use como contexto.\nconst tz = 'America/Bogota';\nconst ahora = new Date();\n\nconst partes = ahora.toLocaleString('en-CA', {\n  timeZone: tz,\n  year: 'numeric', month: '2-digit', day: '2-digit',\n  hour: '2-digit', minute: '2-digit', second: '2-digit',\n  hour12: false\n});\nconst [fechaISO, horaFull] = partes.split(', ');\nconst horaActual = horaFull.slice(0,5);\n\nconst diasSemana = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];\nconst meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];\n\nconst base = new Date(fechaISO + 'T12:00:00');\nconst diaSemana = diasSemana[base.getDay()];\nconst dia = base.getDate();\nconst mes = meses[base.getMonth()];\nconst anio = base.getFullYear();\nconst fechaLegible = `${diaSemana} ${dia} de ${mes}`;\n\n// Fecha maxima permitida (hoy + 5 dias)\nconst lim = new Date(base);\nlim.setDate(lim.getDate() + 5);\nconst pad = n => String(n).padStart(2,'0');\nconst fechaLimiteISO = `${lim.getFullYear()}-${pad(lim.getMonth()+1)}-${pad(lim.getDate())}`;\nconst fechaLimiteLegible = `${diasSemana[lim.getDay()]} ${lim.getDate()} de ${meses[lim.getMonth()]}`;\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    fechaISO,\n    horaActual,\n    diaSemana,\n    fechaLegible,\n    anio,\n    fechaLimiteISO,\n    fechaLimiteLegible,\n    timezone: tz\n  }\n}];"
       },
-      "id": "193f740c-864f-4153-adea-40b526f33a01",
+      "id": "a9795bca-e1b3-415e-a2f9-f286d3be52fe",
       "name": "Fecha y Hora Actual",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        12192,
-        2592
+        13552,
+        2544
       ]
     },
     {
@@ -61,13 +61,13 @@
           "systemMessage": "=Eres el asistente virtual de atencion al cliente de Barberia Alex en Samaniego, Colombia. Responde unicamente sobre temas relacionados con la barberia.\n\nNEGOCIO:\n- Nombre: Barberia Alex\n- Telefono: 3334324220\n- Direccion: Samaniego por la calle al puente colgante\n- Ciudad: Samaniego\n- Barberos: 3\n- Max clientes simultaneos: 3\n- Estacionamiento: Frente del local\n\nHORARIOS:\n- Lunes a viernes: 09:00 - 18:00 (descanso 12:00 - 14:00)\n- Sabado: 10:00 - 18:00 (descanso 12:00 - 14:00)\n- Domingo: cerrado\n- Intervalo minimo entre citas: 15 min\n- Max citas por dia: 8\n- Anticipacion minima para agendar: 20 min\n- Cancelacion gratuita hasta: 2 horas antes\n\nPERSONAL Y DISPONIBILIDAD:\n- Alex: lunes, martes, miercoles, jueves, viernes, sabado\n- Yomar: lunes, martes, jueves, viernes, sabado\n- Kevin: lunes, martes, miercoles, jueves, viernes\n\nSERVICIOS:\n- Corte de Cabello: $20.000 - 40 min\n- Corte + Barba: $30.000 - 55 min\n- Corte para Ninos: $20.000 - 35 min\n- Afeitado Tradicional: $10.000 - 30 min\n- Diseno de Barba: $15.000 - 30 min\n- Tratamiento Capilar Premium (adicional): $40.000 - 25 min\n- Masaje de Cuero Cabelludo (adicional): $5.000 - 15 min\n\nMETODOS DE PAGO:\n- Efectivo\n- Transferencia bancaria: Bancolombia, Nequi, NU\n- Propinas: aceptadas en efectivo\n\nPOLITICAS:\n- Cancelacion: sin costo si se realiza 2 o mas horas antes. Tiempo de espera maximo 15 min.\n- Inasistencias: hasta 3 sin penalizacion. Desde la 4ta se requiere pago adelantado sin devolucion.\n- Reprogramacion: permitida hasta 24 horas antes, sin costo, maximo 2 veces por cita.\n- Recordatorio: por WhatsApp 2 horas antes de la cita.\n- Privacidad: se guardan nombre, telefono, servicios y preferencias durante 2 meses.\n\nCANALES DE ATENCION:\n- WhatsApp: si\n- Llamadas: si\n- Telegram: no\n- Email: no\n\nFORMATO DE MENSAJES:\nCada mensaje del cliente viene precedido por dos lineas de metadatos entre corchetes:\n- Linea 1: nombre registrado (o 'NO REGISTRADO'), numero de whatsapp, total de citas previas\n- Linea 2: contexto temporal (dia y fecha de hoy, hora actual, fecha maxima permitida para agendar)\nUsa esa info para personalizar la atencion y para calcular fechas relativas.\n\nINTERPRETACION DE FECHAS (convierte siempre a formato YYYY-MM-DD antes de llamar herramientas):\n- 'hoy' -> fecha actual\n- 'mañana' -> fecha actual + 1 dia\n- 'pasado mañana' -> fecha actual + 2 dias\n- 'el lunes', 'el martes', etc -> proxima ocurrencia de ese dia de la semana\n- 'este viernes' -> el viernes de esta semana en curso\n- 'el viernes que viene' / 'el proximo viernes' -> el viernes de la siguiente semana\nNO le pidas al cliente que te diga la fecha en formato YYYY-MM-DD, tu la calculas.\n\nINTERPRETACION DE HORAS (convierte a formato HH:mm de 24h antes de llamar herramientas):\n- Contexto: la barberia abre 09:00-18:00 (sabado 10:00-18:00), descanso 12:00-14:00\n- 'a las 9', 'a las 10', 'a las 11' -> 09:00, 10:00, 11:00 (mañana)\n- 'a las 1', 'a las 2', 'a las 3', 'a las 4', 'a las 5', 'a las 6' -> 13:00, 14:00, 15:00, 16:00, 17:00, 18:00 (tarde)\n- 'a las 8 de la mañana' -> 08:00 (rechazar: aun no abrimos)\n- 'a las 7 u 8 de la noche' -> rechazar: ya cerramos a las 18:00\n- Si es ambiguo, pregunta al cliente si es mañana o tarde\n\nLIMITE DE AGENDAMIENTO Y CONSULTA:\n- El cliente puede agendar o consultar disponibilidad para HOY, MAÑANA y hasta 5 dias despues de hoy (rango: hoy a hoy+5)\n- No requiere anticipacion minima mas alla de los 20 min operativos; si hay un espacio libre hoy se puede agendar hoy\n- Rechaza cualquier fecha mayor a hoy+5 (ej: dentro de una semana, el mes que viene, dentro de 10 dias) respondiendo: 'Solo manejamos agenda para los proximos 5 dias. La fecha mas lejana disponible es [fecha maxima en formato dia DD de mes]. Te sirve alguna fecha dentro de ese rango?'\n- NO llames a ninguna herramienta si la fecha solicitada supera el limite\n\nFORMATO DE FECHAS EN RESPUESTAS AL CLIENTE:\n- Internamente (al llamar herramientas) usa siempre YYYY-MM-DD\n- Cuando le respondas al cliente NUNCA muestres el año ni el formato YYYY-MM-DD\n- Usa el formato en español: 'dia-de-la-semana DD de mes' (ej: 'lunes 10 de enero', 'viernes 5 de abril', 'sabado 22 de junio')\n- Meses en minuscula sin tilde: enero, febrero, marzo, abril, mayo, junio, julio, agosto, septiembre, octubre, noviembre, diciembre\n- Dias en minuscula sin tilde: lunes, martes, miercoles, jueves, viernes, sabado, domingo\n- Horas en formato 12h natural (ej: '4 de la tarde', '10 de la mañana', '2 de la tarde'), no '16:00'\n\nINSTRUCCIONES:\n1. SALUDO:\n   - Si el cliente tiene nombre registrado, saludale por su nombre.\n   - Si NO esta registrado (NO REGISTRADO), pidele su nombre de forma natural antes de continuar con su solicitud y usa la herramienta guardar_cliente para guardarlo.\n2. AGENDAR (cita, agendar, turno, reservar): usa el nombre ya registrado (no lo pidas de nuevo), interpreta la fecha y hora desde lenguaje natural y verifica el limite de 5 dias antes de llamar agendar_cita.\n3. CANCELAR (cancelar, anular, quitar): pide la fecha de la cita (puedes interpretarla de lenguaje natural). Usa herramienta cancelar_cita.\n4. DISPONIBILIDAD (hay espacio, cuando puedo, cuales horas): interpreta la fecha desde lenguaje natural, verifica el limite de 5 dias y usa herramienta consultar_disponibilidad.\n5. INFORMACION (precio, horario, donde, servicios): responde directamente con los datos de arriba.\n\nREGLAS:\n- Sin emojis\n- Amable y profesional\n- Si el cliente ya tiene nombre registrado, NO se lo vuelvas a preguntar\n- Solo usa guardar_cliente la primera vez que obtengas el nombre o si el cliente pide cambiarlo\n- Confirma los datos antes de ejecutar cualquier herramienta de agendar/cancelar\n- No reveles datos de otros clientes\n- Si no puedes resolver, deriva al 3334324220"
         }
       },
-      "id": "527e45df-058a-45a9-88c7-91e87c7a738d",
+      "id": "8d5cbad8-2b4a-4624-8a06-f85fe6e4d4b9",
       "name": "Agente Barberia",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.7,
       "position": [
-        12664,
-        2592
+        14032,
+        2544
       ]
     },
     {
@@ -75,13 +75,13 @@
         "sessionIdType": "customKey",
         "sessionKey": "={{ $('Extraer Mensaje').item.json.sessionId }}"
       },
-      "id": "49d22412-43b2-40b3-8fcc-5d7674c6a0d9",
+      "id": "3b2be0c0-1e9f-40d2-bc9b-6df1aca6fc28",
       "name": "Memoria",
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
       "position": [
-        12544,
-        2816
+        13904,
+        2768
       ],
       "credentials": {
         "postgres": {
@@ -125,13 +125,13 @@
           ]
         }
       },
-      "id": "abb40167-cc30-4ea1-a6d3-2768adc90c26",
+      "id": "15d1808e-bb28-46fa-b633-edf03cef0685",
       "name": "Tool Agendar",
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 1.1,
       "position": [
-        12672,
-        2816
+        14032,
+        2768
       ]
     },
     {
@@ -161,13 +161,13 @@
           ]
         }
       },
-      "id": "b3f62136-0585-46c1-a141-92c7a6340c12",
+      "id": "1ddf2ccb-4bf4-4dc6-ac02-890446be4891",
       "name": "Tool Cancelar",
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 1.1,
       "position": [
-        12800,
-        2816
+        14160,
+        2768
       ]
     },
     {
@@ -193,13 +193,13 @@
           ]
         }
       },
-      "id": "0c6fdf58-4e12-4f4a-8019-867a04a38d19",
+      "id": "9fb75613-ef31-4854-a593-d714897c4b25",
       "name": "Tool Guardar Cliente",
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 1.1,
       "position": [
-        13056,
-        2816
+        14416,
+        2768
       ]
     },
     {
@@ -221,13 +221,13 @@
           ]
         }
       },
-      "id": "1600776f-ec01-4e22-a5da-e79f5b9f83b0",
+      "id": "11adec56-62fd-4c52-845e-946198e94da9",
       "name": "Tool Disponibilidad",
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 1.1,
       "position": [
-        12928,
-        2816
+        14288,
+        2768
       ]
     },
     {
@@ -252,26 +252,26 @@
         "jsonBody": "={{ JSON.stringify({ number: $('Extraer Mensaje').item.json.numero, text: $json.output }) }}",
         "options": {}
       },
-      "id": "6773727e-a9c3-46e4-8078-c1d086fdfdfe",
+      "id": "9a40064a-ed4d-4d45-9977-1c210131a117",
       "name": "Enviar WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        13264,
-        2592
+        14624,
+        2544
       ]
     },
     {
       "parameters": {
         "jsCode": "// En n8n el body del webhook llega bajo .body\nconst raw  = $input.first().json;\nconst body = raw.body || raw;\n\nconst data = body.data    || {};\nconst key  = data.key     || {};\nconst msg  = data.message || {};\n\nif (key.fromMe === true) return [];\n\nconst remoteJid = key.remoteJid || body.sender || '';\nif (!remoteJid || remoteJid.includes('@g.us')) return [];\n\nconst tipo = data.messageType || '';\nif (!['conversation', 'extendedTextMessage'].includes(tipo)) return [];\n\nconst texto = msg.conversation || msg.extendedTextMessage?.text || '';\nif (!texto.trim()) return [];\n\nconst numero = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '');\n\n// Calcular fecha y hora actual en zona horaria de Bogota\nconst tz = 'America/Bogota';\nconst ahora = new Date();\nconst partes = ahora.toLocaleString('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });\nconst [fechaActual, horaActual] = partes.split(', ');\nconst diasSemana = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];\nconst dow = new Date(fechaActual + 'T12:00:00').getDay();\nconst diaSemana = diasSemana[dow];\n\n// Calcular fecha maxima permitida (hoy + 5 dias)\nconst limite = new Date(fechaActual + 'T12:00:00');\nlimite.setDate(limite.getDate() + 5);\nconst fechaLimite = limite.toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    numero,\n    texto: texto.trim(),\n    nombre: data.pushName || 'Cliente',\n    sessionId: `barberia_${numero}`,\n    fechaActual,\n    horaActual,\n    diaSemana,\n    fechaLimite\n  }\n}];"
       },
-      "id": "9b102265-c52a-4bec-9c7d-d671c51a4361",
+      "id": "947d7275-e0dc-4594-8342-c0543a8154de",
       "name": "Extraer Mensaje",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        11744,
-        2592
+        13104,
+        2544
       ]
     },
     {
@@ -289,10 +289,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
       "typeVersion": 1.3,
       "position": [
-        12416,
-        2816
+        13776,
+        2768
       ],
-      "id": "b6c178cb-8f41-4164-aa54-3a381df09ec8",
+      "id": "081ae3d9-db53-42c1-89a1-240e53cd8136",
       "name": "Anthropic Chat Model",
       "credentials": {
         "anthropicApi": {
@@ -431,7 +431,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "f9ec8df3-76f7-4a16-939a-67660d562ab5",
+  "versionId": "77d54ee2-d18a-446b-a611-faf14e94a464",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6948377d4c74747a8c6fcaab5db2c8cdcae1b2467cadfae487118881de798aaa"

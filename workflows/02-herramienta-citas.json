@@ -3,26 +3,26 @@
   "nodes": [
     {
       "parameters": {},
-      "id": "2de527f4-c50a-4ff8-bc60-613b35ac994d",
+      "id": "099d1207-bbae-42fb-9ea7-6312a40a5370",
       "name": "Entrada Herramienta",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
       "position": [
-        3136,
-        4560
+        3296,
+        5648
       ]
     },
     {
       "parameters": {
         "jsCode": "const item = $input.first().json;\n\n// Helper: toma el primer valor \"util\" descartando undefined/null/vacios y la cadena literal \"undefined\"/\"null\"\nconst pick = (...vals) => {\n  for (const v of vals) {\n    if (v === undefined || v === null) continue;\n    const s = String(v).trim();\n    if (!s) continue;\n    const low = s.toLowerCase();\n    if (low === 'undefined' || low === 'null') continue;\n    return s;\n  }\n  return '';\n};\n\n// Intenta parsear la query en dos modos:\n// 1) Etiquetado:   \"Nombre: Joham, Servicio: Corte + Barba, Fecha: 2026-04-15, Hora: 09:00\"\n// 2) Posicional:   \"Joham, Corte de Cabello, 2026-04-16, 14:00\" (orden depende de la accion)\nconst query = typeof item.query === 'string' ? item.query.trim() : '';\nconst partes = query ? query.split(',').map(p => p.trim()).filter(Boolean) : [];\n\nconst parsedLabeled = {};\nlet hayEtiquetas = false;\nfor (const part of partes) {\n  const colonIdx = part.indexOf(':');\n  if (colonIdx === -1) continue;\n  const rawKey = part.substring(0, colonIdx).trim().toLowerCase()\n    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n  const value = part.substring(colonIdx + 1).trim();\n  // Solo aceptar como etiqueta si la clave es alfabetica (evita que '10:00' o '2026-04-16' se confundan con etiquetas)\n  if (rawKey && value && /^[a-z]+$/.test(rawKey)) {\n    parsedLabeled[rawKey] = value;\n    hayEtiquetas = true;\n  }\n}\n\n// accion viene fija desde el flujo 01; si no, se infiere abajo.\nlet accion = pick(item.accion, parsedLabeled.accion).toLowerCase();\n\n// Orden posicional segun accion\nconst ordenPorAccion = {\n  agendar:         ['nombre','servicio','fecha','hora'],\n  cancelar:        ['nombre','fecha'],\n  consultar:       ['fecha'],\n  guardar_cliente: ['nombre']\n};\n\nconst parsedPositional = {};\nif (!hayEtiquetas && accion && ordenPorAccion[accion]) {\n  const campos = ordenPorAccion[accion];\n  for (let i = 0; i < campos.length && i < partes.length; i++) {\n    parsedPositional[campos[i]] = partes[i];\n  }\n}\n\n// Fusion: item (fields del tool) -> labeled -> positional\nconst nombre   = pick(item.nombre,   parsedLabeled.nombre,   parsedPositional.nombre);\nconst servicio = pick(item.servicio, parsedLabeled.servicio, parsedPositional.servicio);\nconst fecha    = pick(item.fecha,    parsedLabeled.fecha,    parsedPositional.fecha);\nconst hora     = pick(item.hora,     parsedLabeled.hora,     parsedPositional.hora);\nconst numero   = pick(item.numero,   parsedLabeled.numero);\n\n// Inferir accion si aun esta vacia\nif (!accion) {\n  if (servicio && hora)         accion = 'agendar';\n  else if (nombre && fecha)     accion = 'cancelar';\n  else if (nombre && !fecha)    accion = 'guardar_cliente';\n  else                          accion = 'consultar';\n}\n\nreturn [{\n  json: { accion, nombre, servicio, fecha, hora, numero }\n}];"
       },
-      "id": "a2b26254-6d18-415d-a524-2c704525e7ba",
+      "id": "44e13f7a-af93-4b70-82d7-9cc1c368623c",
       "name": "Parsear Datos",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3360,
-        4560
+        3520,
+        5648
       ]
     },
     {
@@ -124,39 +124,39 @@
           "renameFallbackOutput": "desconocida"
         }
       },
-      "id": "53b26240-372b-4f4c-88cd-f36c296fb1c4",
+      "id": "be7ce826-650f-483d-841e-d01a981ef90b",
       "name": "Tipo de Accion",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        3584,
-        4512
+        3744,
+        5600
       ]
     },
     {
       "parameters": {
         "jsCode": "const accion = $input.first().json.accion || '(vacia)';\nreturn [{ json: { resultado: `No se reconocio la accion: ${accion}. Valores validos: agendar, cancelar, consultar.` } }];"
       },
-      "id": "6ef1b2ca-68c4-4eb1-b46e-525bd7f6fc93",
+      "id": "93dfff88-867d-48a2-a7ed-b7f023ae9731",
       "name": "Accion Desconocida",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3808,
-        4944
+        3968,
+        6032
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Duraciones del servicio (minutos). El evento del calendario dura exactamente lo que dura el servicio.\nconst duraciones = {\n  'corte': 30, 'corte de cabello': 30,\n  'corte + barba': 45, 'corte barba': 45, 'corte+barba': 45,\n  'corte ninos': 25, 'corte niños': 25, 'ninos': 25, 'niños': 25,\n  'afeitado': 20, 'afeitado tradicional': 20,\n  'diseno barba': 20, 'diseño barba': 20, 'diseño de barba': 20,\n  'tratamiento': 45, 'tratamiento capilar': 45,\n  'masaje': 35, 'masaje cuero cabelludo': 35\n};\nconst TZ_OFFSET = '-05:00'; // America/Bogota\n\nconst item = $input.first().json;\n\n// Validar datos minimos\nconst falta = [];\nif (!item.fecha)    falta.push('fecha');\nif (!item.hora)     falta.push('hora');\nif (!item.nombre)   falta.push('nombre');\nif (!item.servicio) falta.push('servicio');\nif (falta.length) {\n  return [{ json: { ...item, _error: true, resultado: `Faltan datos para agendar: ${falta.join(', ')}.` } }];\n}\n\n// Validar formato fecha (YYYY-MM-DD) y hora (HH:mm)\nif (!/^\\d{4}-\\d{2}-\\d{2}$/.test(item.fecha)) {\n  return [{ json: { ...item, _error: true, resultado: `Fecha con formato invalido: ${item.fecha}. Debe ser YYYY-MM-DD.` } }];\n}\nif (!/^\\d{2}:\\d{2}$/.test(item.hora)) {\n  return [{ json: { ...item, _error: true, resultado: `Hora con formato invalido: ${item.hora}. Debe ser HH:mm.` } }];\n}\n\n// Limite de 5 dias de anticipacion\nconst tz = 'America/Bogota';\nconst hoyStr = new Date().toLocaleString('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });\nconst hoy = new Date(hoyStr + 'T00:00:00');\nconst limite = new Date(hoy);\nlimite.setDate(limite.getDate() + 5);\nconst fechaCita = new Date(item.fecha + 'T00:00:00');\nif (fechaCita < hoy) {\n  return [{ json: { ...item, _error: true, resultado: 'No se puede agendar en fechas pasadas.' } }];\n}\nif (fechaCita > limite) {\n  const dias = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];\n  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];\n  const limLegible = `${dias[limite.getDay()]} ${limite.getDate()} de ${meses[limite.getMonth()]}`;\n  return [{ json: { ...item, _error: true, resultado: `Solo manejamos agenda para los proximos 5 dias. La fecha mas lejana disponible es ${limLegible}.` } }];\n}\n\nconst servicioKey = item.servicio.toLowerCase();\nconst duracion = duraciones[servicioKey] || 30;\n\n// Calcular hora fin sumando la duracion en minutos, manteniendo misma fecha salvo overflow\nconst [hh, mm] = item.hora.split(':').map(Number);\nconst totalMin = hh * 60 + mm + duracion;\nconst finHH = Math.floor(totalMin / 60) % 24;\nconst finMM = totalMin % 60;\nconst diaExtra = Math.floor(totalMin / (60 * 24));\n\nlet fechaFin = item.fecha;\nif (diaExtra > 0) {\n  const d = new Date(item.fecha + 'T00:00:00');\n  d.setDate(d.getDate() + diaExtra);\n  const pad = n => String(n).padStart(2,'0');\n  fechaFin = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;\n}\n\nconst pad2 = n => String(n).padStart(2,'0');\nconst fechaHoraInicio = `${item.fecha}T${item.hora}:00${TZ_OFFSET}`;\nconst fechaHoraFin    = `${fechaFin}T${pad2(finHH)}:${pad2(finMM)}:00${TZ_OFFSET}`;\n\nreturn [{\n  json: {\n    ...item,\n    duracion,\n    fechaHoraInicio,\n    fechaHoraFin,\n    titulo: `${item.nombre} - ${item.servicio}`,\n    descripcion: `Telefono: ${item.numero || 'N/A'}`\n  }\n}];"
+        "jsCode": "// Duraciones del servicio (minutos). El evento del calendario dura exactamente lo que dura el servicio.\nconst duraciones = {\n  'corte': 40, 'corte de cabello': 40,\n  'corte + barba': 55, 'corte barba': 55, 'corte+barba': 55,\n  'corte ninos': 35, 'corte niños': 35, 'ninos': 35, 'niños': 35,\n  'afeitado': 30, 'afeitado tradicional': 30,\n  'diseno barba': 30, 'diseño barba': 30, 'diseño de barba': 30,\n  'tratamiento': 55, 'tratamiento capilar': 55,\n  'masaje': 45, 'masaje cuero cabelludo': 45\n};\nconst TZ_OFFSET = '-05:00'; // America/Bogota\n\nconst item = $input.first().json;\n\n// Validar datos minimos\nconst falta = [];\nif (!item.fecha)    falta.push('fecha');\nif (!item.hora)     falta.push('hora');\nif (!item.nombre)   falta.push('nombre');\nif (!item.servicio) falta.push('servicio');\nif (falta.length) {\n  return [{ json: { ...item, _error: true, resultado: `Faltan datos para agendar: ${falta.join(', ')}.` } }];\n}\n\n// Validar formato fecha (YYYY-MM-DD) y hora (HH:mm)\nif (!/^\\d{4}-\\d{2}-\\d{2}$/.test(item.fecha)) {\n  return [{ json: { ...item, _error: true, resultado: `Fecha con formato invalido: ${item.fecha}. Debe ser YYYY-MM-DD.` } }];\n}\nif (!/^\\d{2}:\\d{2}$/.test(item.hora)) {\n  return [{ json: { ...item, _error: true, resultado: `Hora con formato invalido: ${item.hora}. Debe ser HH:mm.` } }];\n}\n\n// Limite de 5 dias de anticipacion\nconst tz = 'America/Bogota';\nconst hoyStr = new Date().toLocaleString('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });\nconst hoy = new Date(hoyStr + 'T00:00:00');\nconst limite = new Date(hoy);\nlimite.setDate(limite.getDate() + 5);\nconst fechaCita = new Date(item.fecha + 'T00:00:00');\nif (fechaCita < hoy) {\n  return [{ json: { ...item, _error: true, resultado: 'No se puede agendar en fechas pasadas.' } }];\n}\nif (fechaCita > limite) {\n  const dias = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];\n  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];\n  const limLegible = `${dias[limite.getDay()]} ${limite.getDate()} de ${meses[limite.getMonth()]}`;\n  return [{ json: { ...item, _error: true, resultado: `Solo manejamos agenda para los proximos 5 dias. La fecha mas lejana disponible es ${limLegible}.` } }];\n}\n\nconst servicioKey = item.servicio.toLowerCase();\nconst duracion = duraciones[servicioKey] || 40;\n\n// Calcular hora fin sumando la duracion en minutos, manteniendo misma fecha salvo overflow\nconst [hh, mm] = item.hora.split(':').map(Number);\nconst totalMin = hh * 60 + mm + duracion;\nconst finHH = Math.floor(totalMin / 60) % 24;\nconst finMM = totalMin % 60;\nconst diaExtra = Math.floor(totalMin / (60 * 24));\n\nlet fechaFin = item.fecha;\nif (diaExtra > 0) {\n  const d = new Date(item.fecha + 'T00:00:00');\n  d.setDate(d.getDate() + diaExtra);\n  const pad = n => String(n).padStart(2,'0');\n  fechaFin = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;\n}\n\nconst pad2 = n => String(n).padStart(2,'0');\nconst fechaHoraInicio = `${item.fecha}T${item.hora}:00${TZ_OFFSET}`;\nconst fechaHoraFin    = `${fechaFin}T${pad2(finHH)}:${pad2(finMM)}:00${TZ_OFFSET}`;\n\nreturn [{\n  json: {\n    ...item,\n    duracion,\n    fechaHoraInicio,\n    fechaHoraFin,\n    titulo: `${item.nombre} - ${item.servicio}`,\n    descripcion: `Telefono: ${item.numero || 'N/A'}`\n  }\n}];"
       },
-      "id": "bc6a9c01-b2dc-4ba6-a9f9-7c12115a38d9",
+      "id": "3658d41a-7b9c-4f9f-aa02-f65e446cdc6a",
       "name": "Calcular Fin Cita",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3808,
-        4176
+        3968,
+        5072
       ]
     },
     {
@@ -174,14 +174,15 @@
           "summary": "={{ $json.titulo }}"
         }
       },
-      "id": "cdf12f7b-0179-4f44-b9c1-29694c4318f1",
+      "id": "d57414d3-2c05-4607-92ed-1c09b7cac561",
       "name": "Crear Evento Calendar",
       "type": "n8n-nodes-base.googleCalendar",
       "typeVersion": 1.3,
       "position": [
-        4928,
-        4176
+        5088,
+        5072
       ],
+      "alwaysOutputData": true,
       "credentials": {
         "googleCalendarOAuth2Api": {
           "id": "3ByIT47jp9liExPL",
@@ -193,13 +194,13 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst inicio = item.start?.dateTime || item.fechaHoraInicio || '';\nreturn [{\n  json: {\n    resultado: `Cita confirmada: ${item.summary || item.titulo}. Inicio: ${inicio}.`\n  }\n}];"
       },
-      "id": "c2e380aa-cd96-4c18-b033-3469cba06777",
+      "id": "4b2c3157-812d-4088-b998-e883118d801b",
       "name": "Respuesta Agendar",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5152,
-        4176
+        5312,
+        5072
       ]
     },
     {
@@ -218,14 +219,15 @@
           "query": "={{ $json.nombre }}"
         }
       },
-      "id": "190590a7-2c32-4b87-878f-01045c326247",
+      "id": "e774de45-43cc-420d-90bf-61511a946dbf",
       "name": "Buscar Cita Cliente",
       "type": "n8n-nodes-base.googleCalendar",
       "typeVersion": 1.3,
       "position": [
-        3808,
-        4368
+        3968,
+        5456
       ],
+      "alwaysOutputData": true,
       "credentials": {
         "googleCalendarOAuth2Api": {
           "id": "3ByIT47jp9liExPL",
@@ -237,13 +239,13 @@
       "parameters": {
         "jsCode": "const eventos = $input.all();\nconst entrada = $('Parsear Datos').item.json;\n\nconst ahora = new Date();\nconst limite = new Date(ahora.getTime() + 2 * 60 * 60 * 1000);\n\nif (eventos.length === 0) {\n  return [{ json: { resultado: 'No se encontro ninguna cita para ' + (entrada.nombre || 'el cliente') + ' en esa fecha.', citaId: null } }];\n}\n\nconst evento = eventos[0].json;\nconst inicioCita = new Date(evento.start?.dateTime || evento.start?.date);\n\nif (inicioCita < limite) {\n  return [{ json: { resultado: 'No se puede cancelar. La cita es en menos de 2 horas. Llama al 3334324220.', citaId: null } }];\n}\n\nreturn [{ json: { resultado: 'ok', citaId: evento.id, resumen: evento.summary } }];"
       },
-      "id": "33a8f44a-a2b5-4c33-a4f4-dbd8b4bbadf4",
+      "id": "d4f22d5c-2d44-4fdc-8e4f-97f7884acc87",
       "name": "Verificar y Eliminar",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4032,
-        4368
+        4192,
+        5456
       ]
     },
     {
@@ -257,13 +259,13 @@
           ]
         }
       },
-      "id": "4dec8db5-aadf-4ff1-8e85-cff102d7f796",
+      "id": "a608caa0-9f07-48f9-abb6-56ccc07ca23a",
       "name": "Tiene Cita",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        4256,
-        4368
+        4416,
+        5456
       ]
     },
     {
@@ -278,14 +280,15 @@
         "eventId": "={{ $json.citaId }}",
         "options": {}
       },
-      "id": "c3f3b90e-beee-4b1e-acad-f6872d568d30",
+      "id": "31ebf3ef-3f0d-4e04-9b5e-5d5be9b1931e",
       "name": "Eliminar Evento",
       "type": "n8n-nodes-base.googleCalendar",
       "typeVersion": 1.3,
       "position": [
-        4480,
-        4272
+        4640,
+        5360
       ],
+      "alwaysOutputData": true,
       "credentials": {
         "googleCalendarOAuth2Api": {
           "id": "3ByIT47jp9liExPL",
@@ -297,26 +300,26 @@
       "parameters": {
         "jsCode": "const resumen = $('Verificar y Eliminar').item.json.resumen || 'la cita';\nreturn [{ json: { resultado: `Cita cancelada: ${resumen}. El espacio queda disponible.` } }];"
       },
-      "id": "e92623fd-0860-4416-9ba1-21eb1e11d71a",
+      "id": "205b6e62-a5a0-4e89-bd6d-da2ea6c7d995",
       "name": "Respuesta Cancelar OK",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4704,
-        4272
+        4864,
+        5360
       ]
     },
     {
       "parameters": {
         "jsCode": "const msg = $('Verificar y Eliminar').item.json.resultado;\nreturn [{ json: { resultado: msg } }];"
       },
-      "id": "f833937b-b470-4eae-8a2c-ef34ee561326",
+      "id": "8d8e53d4-75d2-4d7c-92c0-ba09a09cc226",
       "name": "Respuesta Cancelar NO",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4480,
-        4464
+        4640,
+        5552
       ]
     },
     {
@@ -333,13 +336,13 @@
         "timeMax": "={{ $json.fecha }}T23:59:59-05:00",
         "options": {}
       },
-      "id": "6fd29cd2-96f8-4fde-8ee3-5414a674b507",
+      "id": "69b6a9f7-e5ec-4690-901a-2228d21d79f3",
       "name": "Listar Eventos Dia",
       "type": "n8n-nodes-base.googleCalendar",
       "typeVersion": 1.3,
       "position": [
-        3808,
-        4560
+        3968,
+        5648
       ],
       "settings": {
         "alwaysOutputData": true
@@ -361,13 +364,13 @@
           "queryReplacement": "={{ $json.nombre }},{{ $json.numero }}"
         }
       },
-      "id": "74dfd881-026d-4e58-b982-1547f83d87c4",
+      "id": "5e227f55-6cec-494e-b2be-4ffa0ad18af9",
       "name": "Actualizar Nombre Cliente",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        3808,
-        4752
+        3968,
+        5840
       ],
       "credentials": {
         "postgres": {
@@ -380,26 +383,26 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst nombre = item.nombre || 'cliente';\nreturn [{ json: { resultado: `Nombre guardado correctamente: ${nombre}.` } }];"
       },
-      "id": "647175fd-327d-46a9-ba7b-63dc5cd78f57",
+      "id": "99f54abd-fe26-4e15-b3ce-b44a02408089",
       "name": "Respuesta Guardar Cliente",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4032,
-        4752
+        4192,
+        5840
       ]
     },
     {
       "parameters": {
         "jsCode": "// Obtener eventos del dia (puede ser 0 items si no hay citas)\nconst items = $input.all();\nconst eventos = items.filter(e => e.json && e.json.start).map(e => e.json);\nconst fecha = $('Parsear Datos').item.json.fecha;\n\n// Horarios reales de la barberia\n// Lunes-Viernes: 09:00-12:00 y 14:00-18:00\n// Sabado: 10:00-12:00 y 14:00-18:00\nconst fechaDate = new Date(fecha + 'T12:00:00');\nconst dia = fechaDate.getDay(); // 0=dom, 6=sab\n\nif (dia === 0) {\n  return [{ json: { resultado: 'La barberia no abre los domingos. Elige otro dia.' } }];\n}\n\nconst turnos = dia === 6\n  ? [{ inicio: 10, fin: 12 }, { inicio: 14, fin: 18 }]\n  : [{ inicio: 9, fin: 12 }, { inicio: 14, fin: 18 }];\n\nconst slots = [];\nfor (const turno of turnos) {\n  for (let h = turno.inicio; h < turno.fin; h++) {\n    slots.push(`${String(h).padStart(2,'0')}:00`);\n    slots.push(`${String(h).padStart(2,'0')}:30`);\n  }\n}\n\n// Marcar slots ocupados por eventos existentes\nconst ocupados = new Set();\nfor (const ev of eventos) {\n  const start = new Date(ev.start.dateTime || ev.start.date);\n  const end = new Date(ev.end?.dateTime || ev.end?.date || start);\n  // Marcar cada slot de 30 min que cae dentro del rango del evento\n  for (const slot of slots) {\n    const [sh, sm] = slot.split(':').map(Number);\n    const slotDate = new Date(fecha + 'T' + slot + ':00-05:00');\n    if (slotDate >= start && slotDate < end) {\n      ocupados.add(slot);\n    }\n  }\n}\n\nconst libres = slots.filter(s => !ocupados.has(s));\n\nconst dias = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];\nconst meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];\nconst fechaLegible = `${dias[dia]} ${fechaDate.getDate()} de ${meses[fechaDate.getMonth()]}`;\n\nconst respuesta = libres.length > 0\n  ? `Horarios disponibles el ${fechaLegible}: ${libres.join(', ')}`\n  : `No hay horarios disponibles el ${fechaLegible}. Elige otra fecha.`;\n\nreturn [{ json: { resultado: respuesta } }];"
       },
-      "id": "90b45c99-72f1-437a-803b-34a319c234ac",
+      "id": "6b84a4a0-504f-44fa-ae58-e58a0507039d",
       "name": "Calcular Disponibilidad",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4032,
-        4560
+        4192,
+        5648
       ]
     },
     {
@@ -421,28 +424,29 @@
             }
           ],
           "combinator": "and"
-        }
+        },
+        "options": {}
       },
-      "id": "aa11bb22-cc33-dd44-ee55-ff6677889900",
+      "id": "858adf8a-b7e0-451d-8734-4c420490cb2f",
       "name": "Datos Validos",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        4032,
-        4176
+        4192,
+        5072
       ]
     },
     {
       "parameters": {
         "jsCode": "const item = $input.first().json;\nreturn [{ json: { resultado: item.resultado || 'Error al validar los datos de la cita.' } }];"
       },
-      "id": "bb22cc33-dd44-ee55-ff66-778899001122",
+      "id": "06f3ff83-cab2-4aae-84de-0329cc0be828",
       "name": "Respuesta Error Agendar",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4256,
-        4080
+        4416,
+        4976
       ]
     },
     {
@@ -459,36 +463,37 @@
         "timeMax": "={{ $('Calcular Fin Cita').item.json.fecha }}T23:59:59-05:00",
         "options": {}
       },
-      "id": "cc33dd44-ee55-ff66-7788-990011223344",
+      "id": "6a94298b-fc60-47fd-a3e9-ed7405f240a1",
       "name": "Consultar Eventos Agendar",
       "type": "n8n-nodes-base.googleCalendar",
       "typeVersion": 1.3,
       "position": [
-        4256,
-        4272
+        4416,
+        5168
       ],
-      "onError": "continueRegularOutput",
       "settings": {
         "alwaysOutputData": true
       },
+      "alwaysOutputData": true,
       "credentials": {
         "googleCalendarOAuth2Api": {
           "id": "3ByIT47jp9liExPL",
           "name": "Google Calendar account"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "jsCode": "// Verificar que el horario solicitado no se superponga con eventos existentes en el calendario.\nconst citaData = $('Calcular Fin Cita').item.json;\nconst eventos = $input.all().filter(e => e.json && e.json.start);\n\nconst inicioNuevo = new Date(citaData.fechaHoraInicio);\nconst finNuevo    = new Date(citaData.fechaHoraFin);\n\nfor (const ev of eventos) {\n  const evStart = new Date(ev.json.start.dateTime || ev.json.start.date);\n  const evEnd   = new Date(ev.json.end?.dateTime || ev.json.end?.date || evStart);\n  // Hay conflicto si los rangos se superponen\n  if (inicioNuevo < evEnd && finNuevo > evStart) {\n    const hOcupada = `${String(evStart.getHours()).padStart(2,'0')}:${String(evStart.getMinutes()).padStart(2,'0')}`;\n    const hFinOcupada = `${String(evEnd.getHours()).padStart(2,'0')}:${String(evEnd.getMinutes()).padStart(2,'0')}`;\n    return [{ json: { resultado: `Ese horario ya esta ocupado (${hOcupada} - ${hFinOcupada}). Por favor elige otra hora.` } }];\n  }\n}\n\n// Sin conflicto: pasar los datos de la cita para crear el evento\nreturn [{ json: { ...citaData, _disponible: true } }];"
       },
-      "id": "dd44ee55-ff66-7788-9900-112233445566",
+      "id": "3a1f2390-4498-4254-b52d-6b831d6084b5",
       "name": "Validar Sin Conflicto",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4480,
-        4272
+        4640,
+        5168
       ]
     },
     {
@@ -510,28 +515,29 @@
             }
           ],
           "combinator": "and"
-        }
+        },
+        "options": {}
       },
-      "id": "ee55ff66-7788-9900-1122-334455667788",
+      "id": "3c0ca78e-ba43-4d2c-a764-74b68959ad51",
       "name": "Disponible",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        4704,
-        4272
+        4864,
+        5168
       ]
     },
     {
       "parameters": {
         "jsCode": "const item = $input.first().json;\nreturn [{ json: { resultado: item.resultado || 'El horario no esta disponible.' } }];"
       },
-      "id": "ff667788-9900-1122-3344-556677889900",
+      "id": "a12a1b5d-7de2-44b1-83e6-34010a2687d1",
       "name": "Respuesta Conflicto",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4928,
-        4368
+        5088,
+        5264
       ]
     }
   ],
@@ -757,7 +763,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "6c50950d-4d53-4630-a25a-855c29691128",
+  "versionId": "dd5f1400-9b3e-4c02-9001-88e8992292cb",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6948377d4c74747a8c6fcaab5db2c8cdcae1b2467cadfae487118881de798aaa"
