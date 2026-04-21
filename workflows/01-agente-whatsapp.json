@@ -300,6 +300,168 @@
           "name": "Anthropic account"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const texto = $('Extraer Mensaje').item.json.texto.toLowerCase()\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\nconst nombre = $('Registrar Cliente').item.json.nombre;\nconst registrado = nombre && nombre.toLowerCase() !== 'no registrado' && nombre.toLowerCase() !== 'cliente';\n\nconst kwSimple = ['hola','buenos dias','buenas tardes','buenas noches','buenas',\n  'precio','precios','costo','cuanto cuesta','cuanto vale',\n  'horario','horarios','a que hora abren','a que hora cierran',\n  'donde','direccion','ubicacion','donde quedan',\n  'servicios','que servicios','que ofrecen',\n  'como pago','metodos de pago','formas de pago',\n  'telefono','gracias','muchas gracias','ok','vale','listo','chao','adios'];\nconst esInfo = kwSimple.some(kw => texto.includes(kw));\n\nconst kwTool = ['cita','agendar','reservar','turno','cancelar','anular',\n  'disponib','hay espacio','cuando puedo','que horas hay','nombre'];\nconst necesitaTool = kwTool.some(kw => texto.includes(kw));\n\nconst esSimple = registrado && esInfo && !necesitaTool;\n\nreturn [{ json: { ...$input.first().json, esSimple } }];"
+      },
+      "id": "a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5e5e5",
+      "name": "Detectar Intento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        13776,
+        2544
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.esSimple }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "b2b2b2b2-c3c3-d4d4-e5e5-f6f6f6f6f6f6",
+      "name": "Es Simple",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        14000,
+        2544
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT message FROM n8n_chat_histories WHERE session_id = $1 ORDER BY id DESC LIMIT 10",
+        "options": {
+          "queryReplacement": "={{ $('Extraer Mensaje').item.json.sessionId }}"
+        }
+      },
+      "id": "c3c3c3c3-d4d4-e5e5-f6f6-a7a7a7a7a7a7",
+      "name": "Leer Historial",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        14224,
+        2320
+      ],
+      "onError": "continueRegularOutput",
+      "settings": {
+        "alwaysOutputData": true
+      },
+      "credentials": {
+        "postgres": {
+          "id": "00pBs46Lq2nVl5pG",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const historial = $('Leer Historial').all();\nconst extraer = $('Extraer Mensaje').item.json;\nconst registrar = $('Registrar Cliente').item.json;\nconst fechaHora = $('Fecha y Hora Actual').item.json;\n\nconst systemMsg = 'Eres el asistente virtual de Barberia Alex en Samaniego, Colombia. Responde solo sobre temas de la barberia. Sin emojis. Amable y profesional.\\n\\nNEGOCIO:\\n- Barberia Alex, Samaniego, por la calle al puente colgante\\n- Tel: 3334324220 | Estacionamiento frente al local\\n\\nHORARIOS:\\n- L-V: 09:00-12:00 y 14:00-18:00\\n- Sab: 10:00-12:00 y 14:00-18:00\\n- Dom: cerrado\\n\\nPERSONAL: Alex (L-S), Yomar (L,Ma,J,V,S), Kevin (L-V)\\n\\nSERVICIOS:\\n- Corte de Cabello: $20.000 - 40 min\\n- Corte + Barba: $30.000 - 55 min\\n- Corte Ninos: $20.000 - 35 min\\n- Afeitado Tradicional: $10.000 - 30 min\\n- Diseno de Barba: $15.000 - 30 min\\n- Tratamiento Capilar: $40.000 - 25 min\\n- Masaje Cuero Cabelludo: $5.000 - 15 min\\n\\nPAGO: Efectivo, Bancolombia, Nequi, NU. Propinas en efectivo.\\n\\nPOLITICAS: Cancelacion gratis 2h antes. Espera max 15 min. Hasta 3 inasistencias sin penalizacion. Reprogramacion hasta 24h antes (max 2 veces). Recordatorio WhatsApp 2h antes.\\n\\nSi el cliente necesita agendar, cancelar o consultar disponibilidad, pidele que lo solicite directamente con un mensaje como \"quiero una cita manana a las 10\" para que pueda procesarlo.\\n\\nFORMATO: fechas como \"lunes 10 de enero\" (sin ano). Horas naturales (\"4 de la tarde\"). Sin emojis.';\n\n// Construir mensajes desde historial (viene DESC, invertir)\nconst messages = [];\nconst filas = historial.filter(r => r.json && r.json.message).reverse();\nfor (const row of filas) {\n  const msg = typeof row.json.message === 'string' ? JSON.parse(row.json.message) : row.json.message;\n  const texto = msg.content || msg.data?.content || '';\n  if (!texto || !texto.trim()) continue;\n  const role = msg.type === 'human' ? 'user' : 'assistant';\n  // Evitar mensajes consecutivos del mismo rol\n  if (messages.length > 0 && messages[messages.length - 1].role === role) {\n    messages[messages.length - 1].content += '\\n' + texto;\n  } else {\n    messages.push({ role, content: texto });\n  }\n}\n\n// Asegurar que el primer mensaje sea de usuario\nwhile (messages.length > 0 && messages[0].role !== 'user') {\n  messages.shift();\n}\n\n// Mensaje actual del usuario\nconst nombre = registrar.nombre || 'NO REGISTRADO';\nconst userText = `[Cliente: ${nombre} | Numero: ${extraer.numero}]\\n[Hoy: ${fechaHora.fechaLegible} a las ${fechaHora.horaActual}]\\n\\nMensaje: ${extraer.texto}`;\nmessages.push({ role: 'user', content: userText });\n\nconst body = {\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 500,\n  system: [\n    {\n      type: 'text',\n      text: systemMsg,\n      cache_control: { type: 'ephemeral' }\n    }\n  ],\n  messages\n};\n\nreturn [{ json: { requestBody: body, sessionId: extraer.sessionId, userText: extraer.texto } }];"
+      },
+      "id": "d4d4d4d4-e5e5-f6f6-a7a7-b8b8b8b8b8b8",
+      "name": "Construir Request Cached",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        14448,
+        2320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "anthropic-beta",
+              "value": "prompt-caching-2024-07-31"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requestBody) }}",
+        "options": {}
+      },
+      "id": "e5e5e5e5-f6f6-a7a7-b8b8-c9c9c9c9c9c9",
+      "name": "Anthropic Cached",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        14672,
+        2320
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HEADER_AUTH_CREDENTIAL_ID",
+          "name": "Anthropic API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.content || [];\nconst text = content.map(c => c.text || '').join('');\nconst sessionId = $('Construir Request Cached').item.json.sessionId;\nconst userText = $('Construir Request Cached').item.json.userText;\n\nconst humanMsg = JSON.stringify({type:'human',content:userText,additional_kwargs:{},response_metadata:{}});\nconst aiMsg = JSON.stringify({type:'ai',content:text,additional_kwargs:{},response_metadata:{}});\n\nreturn [{\n  json: {\n    output: text || 'Lo siento, no pude procesar tu consulta.',\n    sessionId,\n    userText,\n    aiText: text,\n    humanMsg,\n    aiMsg\n  }\n}];"
+      },
+      "id": "f6f6f6f6-a7a7-b8b8-c9c9-d0d0d0d0d0d0",
+      "name": "Formatear Respuesta Cached",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        14896,
+        2320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO n8n_chat_histories (session_id, message) VALUES ($1, $2::jsonb), ($1, $3::jsonb)",
+        "options": {
+          "queryReplacement": "={{ $json.sessionId }},{{ $json.humanMsg }},{{ $json.aiMsg }}"
+        }
+      },
+      "id": "a7a7a7a7-b8b8-c9c9-d0d0-e1e1e1e1e1e1",
+      "name": "Guardar en Historial",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        15120,
+        2432
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "00pBs46Lq2nVl5pG",
+          "name": "Postgres account 2"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -407,7 +569,85 @@
       "main": [
         [
           {
+            "node": "Detectar Intento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detectar Intento": {
+      "main": [
+        [
+          {
+            "node": "Es Simple",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es Simple": {
+      "main": [
+        [
+          {
+            "node": "Leer Historial",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Agente Barberia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Historial": {
+      "main": [
+        [
+          {
+            "node": "Construir Request Cached",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construir Request Cached": {
+      "main": [
+        [
+          {
+            "node": "Anthropic Cached",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Cached": {
+      "main": [
+        [
+          {
+            "node": "Formatear Respuesta Cached",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear Respuesta Cached": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Guardar en Historial",
             "type": "main",
             "index": 0
           }
