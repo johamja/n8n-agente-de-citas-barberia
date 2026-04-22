@@ -7,13 +7,13 @@
         "path": "whatsapp-barberia",
         "options": {}
       },
-      "id": "fdcbafe4-d286-4bd2-b076-e43d7d830196",
+      "id": "4f1bcedc-0055-4082-8a87-210275364d68",
       "name": "Webhook Evolution",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        12880,
-        2544
+        13280,
+        3488
       ],
       "webhookId": "barberia-whatsapp-001"
     },
@@ -25,13 +25,13 @@
           "queryReplacement": "={{ $('Extraer Mensaje').item.json.numero }}"
         }
       },
-      "id": "4d242372-eb67-4485-826a-705a4b0d3cac",
+      "id": "ed568172-def8-405b-b205-187107312bca",
       "name": "Registrar Cliente",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        13328,
-        2544
+        13728,
+        3488
       ],
       "credentials": {
         "postgres": {
@@ -44,13 +44,13 @@
       "parameters": {
         "jsCode": "// Fecha y hora actual del servidor n8n en zona America/Bogota.\n// Expone multiples formatos para que el agente los use como contexto.\nconst tz = 'America/Bogota';\nconst ahora = new Date();\n\nconst partes = ahora.toLocaleString('en-CA', {\n  timeZone: tz,\n  year: 'numeric', month: '2-digit', day: '2-digit',\n  hour: '2-digit', minute: '2-digit', second: '2-digit',\n  hour12: false\n});\nconst [fechaISO, horaFull] = partes.split(', ');\nconst horaActual = horaFull.slice(0,5);\n\nconst diasSemana = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];\nconst meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];\n\nconst base = new Date(fechaISO + 'T12:00:00');\nconst diaSemana = diasSemana[base.getDay()];\nconst dia = base.getDate();\nconst mes = meses[base.getMonth()];\nconst anio = base.getFullYear();\nconst fechaLegible = `${diaSemana} ${dia} de ${mes}`;\n\n// Fecha maxima permitida (hoy + 5 dias)\nconst lim = new Date(base);\nlim.setDate(lim.getDate() + 5);\nconst pad = n => String(n).padStart(2,'0');\nconst fechaLimiteISO = `${lim.getFullYear()}-${pad(lim.getMonth()+1)}-${pad(lim.getDate())}`;\nconst fechaLimiteLegible = `${diasSemana[lim.getDay()]} ${lim.getDate()} de ${meses[lim.getMonth()]}`;\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    fechaISO,\n    horaActual,\n    diaSemana,\n    fechaLegible,\n    anio,\n    fechaLimiteISO,\n    fechaLimiteLegible,\n    timezone: tz\n  }\n}];"
       },
-      "id": "a9795bca-e1b3-415e-a2f9-f286d3be52fe",
+      "id": "e0def9e7-af05-484d-a5ea-8fca02401725",
       "name": "Fecha y Hora Actual",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        13552,
-        2544
+        13952,
+        3488
       ]
     },
     {
@@ -58,30 +58,31 @@
         "promptType": "define",
         "text": "=[Cliente: {{ $('Registrar Cliente').item.json.nombre || 'NO REGISTRADO' }} | Numero: {{ $('Extraer Mensaje').item.json.numero }} | Citas previas: {{ $('Registrar Cliente').item.json.total_citas || 0 }}]\n[Contexto temporal n8n: hoy es {{ $('Fecha y Hora Actual').item.json.fechaLegible }} (ISO {{ $('Fecha y Hora Actual').item.json.fechaISO }}) a las {{ $('Fecha y Hora Actual').item.json.horaActual }} hora de {{ $('Fecha y Hora Actual').item.json.timezone }} | Fecha maxima para agendar: {{ $('Fecha y Hora Actual').item.json.fechaLimiteLegible }} (ISO {{ $('Fecha y Hora Actual').item.json.fechaLimiteISO }})]\n\nMensaje: {{ $('Extraer Mensaje').item.json.texto }}",
         "options": {
-          "systemMessage": "=Eres el asistente virtual de atencion al cliente de Barberia Alex en Samaniego, Colombia. Responde unicamente sobre temas relacionados con la barberia.\n\nNEGOCIO:\n- Nombre: Barberia Alex\n- Telefono: 3334324220\n- Direccion: Samaniego por la calle al puente colgante\n- Ciudad: Samaniego\n- Barberos: 3\n- Max clientes simultaneos: 3\n- Estacionamiento: Frente del local\n\nHORARIOS:\n- Lunes a viernes: 09:00 - 18:00 (descanso 12:00 - 14:00)\n- Sabado: 10:00 - 18:00 (descanso 12:00 - 14:00)\n- Domingo: cerrado\n- Intervalo minimo entre citas: 15 min\n- Max citas por dia: 8\n- Anticipacion minima para agendar: 20 min\n- Cancelacion gratuita hasta: 2 horas antes\n\nPERSONAL Y DISPONIBILIDAD:\n- Alex: lunes, martes, miercoles, jueves, viernes, sabado\n- Yomar: lunes, martes, jueves, viernes, sabado\n- Kevin: lunes, martes, miercoles, jueves, viernes\n\nSERVICIOS:\n- Corte de Cabello: $20.000 - 40 min\n- Corte + Barba: $30.000 - 55 min\n- Corte para Ninos: $20.000 - 35 min\n- Afeitado Tradicional: $10.000 - 30 min\n- Diseno de Barba: $15.000 - 30 min\n- Tratamiento Capilar Premium (adicional): $40.000 - 25 min\n- Masaje de Cuero Cabelludo (adicional): $5.000 - 15 min\n\nMETODOS DE PAGO:\n- Efectivo\n- Transferencia bancaria: Bancolombia, Nequi, NU\n- Propinas: aceptadas en efectivo\n\nPOLITICAS:\n- Cancelacion: sin costo si se realiza 2 o mas horas antes. Tiempo de espera maximo 15 min.\n- Inasistencias: hasta 3 sin penalizacion. Desde la 4ta se requiere pago adelantado sin devolucion.\n- Reprogramacion: permitida hasta 24 horas antes, sin costo, maximo 2 veces por cita.\n- Recordatorio: por WhatsApp 2 horas antes de la cita.\n- Privacidad: se guardan nombre, telefono, servicios y preferencias durante 2 meses.\n\nCANALES DE ATENCION:\n- WhatsApp: si\n- Llamadas: si\n- Telegram: no\n- Email: no\n\nFORMATO DE MENSAJES:\nCada mensaje del cliente viene precedido por dos lineas de metadatos entre corchetes:\n- Linea 1: nombre registrado (o 'NO REGISTRADO'), numero de whatsapp, total de citas previas\n- Linea 2: contexto temporal (dia y fecha de hoy, hora actual, fecha maxima permitida para agendar)\nUsa esa info para personalizar la atencion y para calcular fechas relativas.\n\nINTERPRETACION DE FECHAS (convierte siempre a formato YYYY-MM-DD antes de llamar herramientas):\n- 'hoy' -> fecha actual\n- 'mañana' -> fecha actual + 1 dia\n- 'pasado mañana' -> fecha actual + 2 dias\n- 'el lunes', 'el martes', etc -> proxima ocurrencia de ese dia de la semana\n- 'este viernes' -> el viernes de esta semana en curso\n- 'el viernes que viene' / 'el proximo viernes' -> el viernes de la siguiente semana\nNO le pidas al cliente que te diga la fecha en formato YYYY-MM-DD, tu la calculas.\n\nINTERPRETACION DE HORAS (convierte a formato HH:mm de 24h antes de llamar herramientas):\n- Contexto: la barberia abre 09:00-18:00 (sabado 10:00-18:00), descanso 12:00-14:00\n- 'a las 9', 'a las 10', 'a las 11' -> 09:00, 10:00, 11:00 (mañana)\n- 'a las 1', 'a las 2', 'a las 3', 'a las 4', 'a las 5', 'a las 6' -> 13:00, 14:00, 15:00, 16:00, 17:00, 18:00 (tarde)\n- 'a las 8 de la mañana' -> 08:00 (rechazar: aun no abrimos)\n- 'a las 7 u 8 de la noche' -> rechazar: ya cerramos a las 18:00\n- Si es ambiguo, pregunta al cliente si es mañana o tarde\n\nLIMITE DE AGENDAMIENTO Y CONSULTA:\n- El cliente puede agendar o consultar disponibilidad para HOY, MAÑANA y hasta 5 dias despues de hoy (rango: hoy a hoy+5)\n- No requiere anticipacion minima mas alla de los 20 min operativos; si hay un espacio libre hoy se puede agendar hoy\n- Rechaza cualquier fecha mayor a hoy+5 (ej: dentro de una semana, el mes que viene, dentro de 10 dias) respondiendo: 'Solo manejamos agenda para los proximos 5 dias. La fecha mas lejana disponible es [fecha maxima en formato dia DD de mes]. Te sirve alguna fecha dentro de ese rango?'\n- NO llames a ninguna herramienta si la fecha solicitada supera el limite\n\nFORMATO DE FECHAS EN RESPUESTAS AL CLIENTE:\n- Internamente (al llamar herramientas) usa siempre YYYY-MM-DD\n- Cuando le respondas al cliente NUNCA muestres el año ni el formato YYYY-MM-DD\n- Usa el formato en español: 'dia-de-la-semana DD de mes' (ej: 'lunes 10 de enero', 'viernes 5 de abril', 'sabado 22 de junio')\n- Meses en minuscula sin tilde: enero, febrero, marzo, abril, mayo, junio, julio, agosto, septiembre, octubre, noviembre, diciembre\n- Dias en minuscula sin tilde: lunes, martes, miercoles, jueves, viernes, sabado, domingo\n- Horas en formato 12h natural (ej: '4 de la tarde', '10 de la mañana', '2 de la tarde'), no '16:00'\n\nINSTRUCCIONES:\n1. SALUDO:\n   - Si el cliente tiene nombre registrado, saludale por su nombre.\n   - Si NO esta registrado (NO REGISTRADO), pidele su nombre de forma natural antes de continuar con su solicitud y usa la herramienta guardar_cliente para guardarlo.\n2. AGENDAR (cita, agendar, turno, reservar): usa el nombre ya registrado (no lo pidas de nuevo), interpreta la fecha y hora desde lenguaje natural y verifica el limite de 5 dias antes de llamar agendar_cita.\n3. CANCELAR (cancelar, anular, quitar): pide la fecha de la cita (puedes interpretarla de lenguaje natural). Usa herramienta cancelar_cita.\n4. DISPONIBILIDAD (hay espacio, cuando puedo, cuales horas): interpreta la fecha desde lenguaje natural, verifica el limite de 5 dias y usa herramienta consultar_disponibilidad.\n5. INFORMACION (precio, horario, donde, servicios): responde directamente con los datos de arriba.\n\nREGLAS:\n- Sin emojis\n- Amable y profesional\n- Si el cliente ya tiene nombre registrado, NO se lo vuelvas a preguntar\n- Solo usa guardar_cliente la primera vez que obtengas el nombre o si el cliente pide cambiarlo\n- Confirma los datos antes de ejecutar cualquier herramienta de agendar/cancelar\n- No reveles datos de otros clientes\n- Si no puedes resolver, deriva al 3334324220"
+          "systemMessage": "={{ $('Prompt del sistema').item.json.systemPrompt }}"
         }
       },
-      "id": "8d5cbad8-2b4a-4624-8a06-f85fe6e4d4b9",
+      "id": "4c105727-681e-44cc-83f1-7ff6c8995d0f",
       "name": "Agente Barberia",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.7,
       "position": [
-        14032,
-        2544
+        16224,
+        3632
       ]
     },
     {
       "parameters": {
         "sessionIdType": "customKey",
-        "sessionKey": "={{ $('Extraer Mensaje').item.json.sessionId }}"
+        "sessionKey": "={{ $('Extraer Mensaje').item.json.numero }}",
+        "contextWindowLength": 6
       },
-      "id": "3b2be0c0-1e9f-40d2-bc9b-6df1aca6fc28",
+      "id": "852624f8-8663-4e39-96c4-a637f21f735a",
       "name": "Memoria",
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
       "position": [
-        13904,
-        2768
+        16096,
+        3856
       ],
       "credentials": {
         "postgres": {
@@ -125,13 +126,13 @@
           ]
         }
       },
-      "id": "15d1808e-bb28-46fa-b633-edf03cef0685",
+      "id": "1c2a1208-5e27-4525-8e9e-f58d8248ccf0",
       "name": "Tool Agendar",
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 1.1,
       "position": [
-        14032,
-        2768
+        16224,
+        3856
       ]
     },
     {
@@ -161,13 +162,13 @@
           ]
         }
       },
-      "id": "1ddf2ccb-4bf4-4dc6-ac02-890446be4891",
+      "id": "9ec2e9bd-56b1-4af0-987e-f97d2d058ac6",
       "name": "Tool Cancelar",
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 1.1,
       "position": [
-        14160,
-        2768
+        16352,
+        3856
       ]
     },
     {
@@ -193,13 +194,13 @@
           ]
         }
       },
-      "id": "9fb75613-ef31-4854-a593-d714897c4b25",
+      "id": "cd578e90-c21e-4d04-966f-dce788746028",
       "name": "Tool Guardar Cliente",
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 1.1,
       "position": [
-        14416,
-        2768
+        16608,
+        3856
       ]
     },
     {
@@ -221,13 +222,41 @@
           ]
         }
       },
-      "id": "11adec56-62fd-4c52-845e-946198e94da9",
+      "id": "86eb012e-c853-4008-9b4a-e7d9298c8cb2",
       "name": "Tool Disponibilidad",
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 1.1,
       "position": [
-        14288,
-        2768
+        16480,
+        3856
+      ]
+    },
+    {
+      "parameters": {
+        "name": "consultar_citas_usuario",
+        "description": "Consulta TODAS las citas activas del cliente actual filtrando por su numero de telefono. OBLIGATORIO llamar antes de cancelar cualquier cita para confirmar que existe y obtener la fecha exacta (YYYY-MM-DD). No requiere parametros del modelo: el numero se toma automaticamente del chat.",
+        "workflowId": "VtFVF8lemF0poBqK",
+        "responsePropertyName": "resultado",
+        "fields": {
+          "values": [
+            {
+              "name": "accion",
+              "stringValue": "={{ 'consultar_citas' }}"
+            },
+            {
+              "name": "numero",
+              "stringValue": "={{ $('Extraer Mensaje').item.json.numero }}"
+            }
+          ]
+        }
+      },
+      "id": "4a7c9d13-b02e-4fa3-8c5e-55b1e7a33201",
+      "name": "Tool Consultar Citas Usuario",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        16736,
+        3856
       ]
     },
     {
@@ -252,26 +281,26 @@
         "jsonBody": "={{ JSON.stringify({ number: $('Extraer Mensaje').item.json.numero, text: $json.output }) }}",
         "options": {}
       },
-      "id": "9a40064a-ed4d-4d45-9977-1c210131a117",
+      "id": "fb37a383-5939-432a-9fb9-acd303fc7b46",
       "name": "Enviar WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        14624,
-        2544
+        16816,
+        3584
       ]
     },
     {
       "parameters": {
         "jsCode": "// En n8n el body del webhook llega bajo .body\nconst raw  = $input.first().json;\nconst body = raw.body || raw;\n\nconst data = body.data    || {};\nconst key  = data.key     || {};\nconst msg  = data.message || {};\n\nif (key.fromMe === true) return [];\n\nconst remoteJid = key.remoteJid || body.sender || '';\nif (!remoteJid || remoteJid.includes('@g.us')) return [];\n\nconst tipo = data.messageType || '';\nif (!['conversation', 'extendedTextMessage'].includes(tipo)) return [];\n\nconst texto = msg.conversation || msg.extendedTextMessage?.text || '';\nif (!texto.trim()) return [];\n\nconst numero = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '');\n\n// Calcular fecha y hora actual en zona horaria de Bogota\nconst tz = 'America/Bogota';\nconst ahora = new Date();\nconst partes = ahora.toLocaleString('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });\nconst [fechaActual, horaActual] = partes.split(', ');\nconst diasSemana = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];\nconst dow = new Date(fechaActual + 'T12:00:00').getDay();\nconst diaSemana = diasSemana[dow];\n\n// Calcular fecha maxima permitida (hoy + 5 dias)\nconst limite = new Date(fechaActual + 'T12:00:00');\nlimite.setDate(limite.getDate() + 5);\nconst fechaLimite = limite.toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    numero,\n    texto: texto.trim(),\n    nombre: data.pushName || 'Cliente',\n    sessionId: `barberia_${numero}`,\n    fechaActual,\n    horaActual,\n    diaSemana,\n    fechaLimite\n  }\n}];"
       },
-      "id": "947d7275-e0dc-4594-8342-c0543a8154de",
+      "id": "c82b09d9-d1c9-41d9-b707-3e97058d0507",
       "name": "Extraer Mensaje",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        13104,
-        2544
+        13504,
+        3488
       ]
     },
     {
@@ -283,16 +312,16 @@
           "cachedResultName": "Claude Haiku 4.5"
         },
         "options": {
-          "temperature": 0.3
+          "temperature": 0.2
         }
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
       "typeVersion": 1.3,
       "position": [
-        13776,
-        2768
+        15968,
+        3856
       ],
-      "id": "081ae3d9-db53-42c1-89a1-240e53cd8136",
+      "id": "1ae31a6e-b998-4c95-a9b1-fa6173966a97",
       "name": "Anthropic Chat Model",
       "credentials": {
         "anthropicApi": {
@@ -303,24 +332,25 @@
     },
     {
       "parameters": {
-        "jsCode": "const texto = $('Extraer Mensaje').item.json.texto.toLowerCase()\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\nconst nombre = $('Registrar Cliente').item.json.nombre;\nconst registrado = nombre && nombre.toLowerCase() !== 'no registrado' && nombre.toLowerCase() !== 'cliente';\n\nconst kwSimple = ['hola','buenos dias','buenas tardes','buenas noches','buenas',\n  'precio','precios','costo','cuanto cuesta','cuanto vale',\n  'horario','horarios','a que hora abren','a que hora cierran',\n  'donde','direccion','ubicacion','donde quedan',\n  'servicios','que servicios','que ofrecen',\n  'como pago','metodos de pago','formas de pago',\n  'telefono','gracias','muchas gracias','ok','vale','listo','chao','adios'];\nconst esInfo = kwSimple.some(kw => texto.includes(kw));\n\nconst kwTool = ['cita','agendar','reservar','turno','cancelar','anular',\n  'disponib','hay espacio','cuando puedo','que horas hay','nombre'];\nconst necesitaTool = kwTool.some(kw => texto.includes(kw));\n\nconst esSimple = registrado && esInfo && !necesitaTool;\n\nreturn [{ json: { ...$input.first().json, esSimple } }];"
+        "jsCode": "const texto = $('Extraer Mensaje').item.json.texto.toLowerCase()\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\nconst nombre = $('Registrar Cliente').item.json.nombre;\nconst registrado = nombre && nombre.toLowerCase() !== 'no registrado' && nombre.toLowerCase() !== 'cliente';\n\nconst kwSimple = $('Intension').first().json.intencion\nconst esInfo = kwSimple.some(kw => texto.includes(kw));\n\nconst kwTool = $('herramienta').first().json.herramienta\nconst necesitaTool = kwTool.some(kw => texto.includes(kw));\n\nconst esSimple = registrado && esInfo && !necesitaTool;\n\nreturn [{ json: { ...$input.first().json, esSimple } }];"
       },
-      "id": "a1a1a1a1-b2b2-c3c3-d4d4-e5e5e5e5e5e5",
+      "id": "fb7302b4-5073-4f42-9583-e33cd09f134f",
       "name": "Detectar Intento",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        13776,
-        2544
+        14848,
+        3488
       ]
     },
     {
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": false,
+            "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
@@ -329,20 +359,24 @@
               "operator": {
                 "type": "boolean",
                 "operation": "equals"
-              }
+              },
+              "id": "c7c27951-2bc9-4fc2-814d-e058ecb45b57"
             }
           ],
           "combinator": "and"
-        }
+        },
+        "options": {}
       },
-      "id": "b2b2b2b2-c3c3-d4d4-e5e5-f6f6f6f6f6f6",
+      "id": "d3b6f67c-ecb3-45db-8dd6-20a174875867",
       "name": "Es Simple",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        14000,
-        2544
-      ]
+        15072,
+        3488
+      ],
+      "alwaysOutputData": false,
+      "retryOnFail": false
     },
     {
       "parameters": {
@@ -352,15 +386,14 @@
           "queryReplacement": "={{ $('Extraer Mensaje').item.json.sessionId }}"
         }
       },
-      "id": "c3c3c3c3-d4d4-e5e5-f6f6-a7a7a7a7a7a7",
+      "id": "287aa090-5edd-4625-a849-10c7fc46cda7",
       "name": "Leer Historial",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        14224,
-        2320
+        15296,
+        3328
       ],
-      "onError": "continueRegularOutput",
       "settings": {
         "alwaysOutputData": true
       },
@@ -369,19 +402,20 @@
           "id": "00pBs46Lq2nVl5pG",
           "name": "Postgres account 2"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "const historial = $('Leer Historial').all();\nconst extraer = $('Extraer Mensaje').item.json;\nconst registrar = $('Registrar Cliente').item.json;\nconst fechaHora = $('Fecha y Hora Actual').item.json;\n\nconst systemMsg = 'Eres el asistente virtual de Barberia Alex en Samaniego, Colombia. Responde solo sobre temas de la barberia. Sin emojis. Amable y profesional.\\n\\nNEGOCIO:\\n- Barberia Alex, Samaniego, por la calle al puente colgante\\n- Tel: 3334324220 | Estacionamiento frente al local\\n\\nHORARIOS:\\n- L-V: 09:00-12:00 y 14:00-18:00\\n- Sab: 10:00-12:00 y 14:00-18:00\\n- Dom: cerrado\\n\\nPERSONAL: Alex (L-S), Yomar (L,Ma,J,V,S), Kevin (L-V)\\n\\nSERVICIOS:\\n- Corte de Cabello: $20.000 - 40 min\\n- Corte + Barba: $30.000 - 55 min\\n- Corte Ninos: $20.000 - 35 min\\n- Afeitado Tradicional: $10.000 - 30 min\\n- Diseno de Barba: $15.000 - 30 min\\n- Tratamiento Capilar: $40.000 - 25 min\\n- Masaje Cuero Cabelludo: $5.000 - 15 min\\n\\nPAGO: Efectivo, Bancolombia, Nequi, NU. Propinas en efectivo.\\n\\nPOLITICAS: Cancelacion gratis 2h antes. Espera max 15 min. Hasta 3 inasistencias sin penalizacion. Reprogramacion hasta 24h antes (max 2 veces). Recordatorio WhatsApp 2h antes.\\n\\nSi el cliente necesita agendar, cancelar o consultar disponibilidad, pidele que lo solicite directamente con un mensaje como \"quiero una cita manana a las 10\" para que pueda procesarlo.\\n\\nFORMATO: fechas como \"lunes 10 de enero\" (sin ano). Horas naturales (\"4 de la tarde\"). Sin emojis.';\n\n// Construir mensajes desde historial (viene DESC, invertir)\nconst messages = [];\nconst filas = historial.filter(r => r.json && r.json.message).reverse();\nfor (const row of filas) {\n  const msg = typeof row.json.message === 'string' ? JSON.parse(row.json.message) : row.json.message;\n  const texto = msg.content || msg.data?.content || '';\n  if (!texto || !texto.trim()) continue;\n  const role = msg.type === 'human' ? 'user' : 'assistant';\n  // Evitar mensajes consecutivos del mismo rol\n  if (messages.length > 0 && messages[messages.length - 1].role === role) {\n    messages[messages.length - 1].content += '\\n' + texto;\n  } else {\n    messages.push({ role, content: texto });\n  }\n}\n\n// Asegurar que el primer mensaje sea de usuario\nwhile (messages.length > 0 && messages[0].role !== 'user') {\n  messages.shift();\n}\n\n// Mensaje actual del usuario\nconst nombre = registrar.nombre || 'NO REGISTRADO';\nconst userText = `[Cliente: ${nombre} | Numero: ${extraer.numero}]\\n[Hoy: ${fechaHora.fechaLegible} a las ${fechaHora.horaActual}]\\n\\nMensaje: ${extraer.texto}`;\nmessages.push({ role: 'user', content: userText });\n\nconst body = {\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 500,\n  system: [\n    {\n      type: 'text',\n      text: systemMsg,\n      cache_control: { type: 'ephemeral' }\n    }\n  ],\n  messages\n};\n\nreturn [{ json: { requestBody: body, sessionId: extraer.sessionId, userText: extraer.texto } }];"
+        "jsCode": "const historial = $('Leer Historial').all();\nconst extraer = $('Extraer Mensaje').item.json;\nconst registrar = $('Registrar Cliente').item.json;\nconst fechaHora = $('Fecha y Hora Actual').item.json;\n\nconst systemMsg = $('Prompt del sistema').first().json.systemPrompt\n\n// Construir mensajes desde historial (viene DESC, invertir)\nconst messages = [];\nconst filas = historial.filter(r => r.json && r.json.message).reverse();\nfor (const row of filas) {\n  const msg = typeof row.json.message === 'string' ? JSON.parse(row.json.message) : row.json.message;\n  const texto = msg.content || msg.data?.content || '';\n  if (!texto || !texto.trim()) continue;\n  const role = msg.type === 'human' ? 'user' : 'assistant';\n  // Evitar mensajes consecutivos del mismo rol\n  if (messages.length > 0 && messages[messages.length - 1].role === role) {\n    messages[messages.length - 1].content += '\\n' + texto;\n  } else {\n    messages.push({ role, content: texto });\n  }\n}\n\n// Asegurar que el primer mensaje sea de usuario\nwhile (messages.length > 0 && messages[0].role !== 'user') {\n  messages.shift();\n}\n\n// Mensaje actual del usuario\nconst nombre = registrar.nombre || 'NO REGISTRADO';\nconst userText = `[Cliente: ${nombre} | Numero: ${extraer.numero}]\\n[Hoy: ${fechaHora.fechaLegible} a las ${fechaHora.horaActual}]\\n\\nMensaje: ${extraer.texto}`;\nmessages.push({ role: 'user', content: userText });\n\nconst body = {\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 500,\n  cache_control: { \"type\": \"ephemeral\" },\n  system: [\n    {\n      type: 'text',\n      text: systemMsg,\n      cache_control: { type: 'ephemeral' }\n    }\n  ],\n  messages\n};\n\nreturn [{ json: { requestBody: body, sessionId: extraer.sessionId, userText: extraer.texto } }];"
       },
-      "id": "d4d4d4d4-e5e5-f6f6-a7a7-b8b8b8b8b8b8",
+      "id": "b5dcc8ee-3cc4-4abb-b8db-3e5c1473e1e4",
       "name": "Construir Request Cached",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        14448,
-        2320
+        15520,
+        3328
       ]
     },
     {
@@ -412,18 +446,18 @@
         "jsonBody": "={{ JSON.stringify($json.requestBody) }}",
         "options": {}
       },
-      "id": "e5e5e5e5-f6f6-a7a7-b8b8-c9c9c9c9c9c9",
+      "id": "528f2018-e591-447b-8efb-7c6d8223b195",
       "name": "Anthropic Cached",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        14672,
-        2320
+        15744,
+        3328
       ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "HEADER_AUTH_CREDENTIAL_ID",
-          "name": "Anthropic API Key"
+          "id": "3NslX56MzRdzDY6X",
+          "name": "Header Auth account"
         }
       }
     },
@@ -431,13 +465,13 @@
       "parameters": {
         "jsCode": "const response = $input.first().json;\nconst content = response.content || [];\nconst text = content.map(c => c.text || '').join('');\nconst sessionId = $('Construir Request Cached').item.json.sessionId;\nconst userText = $('Construir Request Cached').item.json.userText;\n\nconst humanMsg = JSON.stringify({type:'human',content:userText,additional_kwargs:{},response_metadata:{}});\nconst aiMsg = JSON.stringify({type:'ai',content:text,additional_kwargs:{},response_metadata:{}});\n\nreturn [{\n  json: {\n    output: text || 'Lo siento, no pude procesar tu consulta.',\n    sessionId,\n    userText,\n    aiText: text,\n    humanMsg,\n    aiMsg\n  }\n}];"
       },
-      "id": "f6f6f6f6-a7a7-b8b8-c9c9-d0d0d0d0d0d0",
+      "id": "3f823285-e258-4d1b-bb3c-4afd15e61668",
       "name": "Formatear Respuesta Cached",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        14896,
-        2320
+        16288,
+        3328
       ]
     },
     {
@@ -448,13 +482,13 @@
           "queryReplacement": "={{ $json.sessionId }},{{ $json.humanMsg }},{{ $json.aiMsg }}"
         }
       },
-      "id": "a7a7a7a7-b8b8-c9c9-d0d0-e1e1e1e1e1e1",
+      "id": "790c459d-4746-43ef-b5aa-a0d54d8b8cc6",
       "name": "Guardar en Historial",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        15120,
-        2432
+        16816,
+        3280
       ],
       "credentials": {
         "postgres": {
@@ -462,6 +496,120 @@
           "name": "Postgres account 2"
         }
       }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "016467f4-098c-4453-bfef-e381439122b3",
+              "name": "systemPrompt",
+              "value": "Eres el asistente virtual de atencion al cliente de Barberia Alex en Samaniego, Colombia. Responde unicamente sobre temas relacionados con la barberia.\n\nNEGOCIO:\n- Nombre: Barberia Alex\n- Telefono: 3334324220\n- Direccion: Samaniego por la calle al puente colgante\n- Barberos: 3\n- Max clientes simultaneos: 3\n\nHORARIOS:\n- Lunes a viernes: 09:00 - 18:00 (descanso 12:00 - 14:00)\n- Sabado: 10:00 - 18:00 (descanso 12:00 - 14:00)\n- Domingo: cerrado\n- Max citas por dia: 8\n\nSERVICIOS:\n- Corte de Cabello: $20.000 - 40 min\n- Corte + Barba: $30.000 - 55 min\n- Corte para Ninos: $20.000 - 35 min\n- Afeitado Tradicional: $10.000 - 30 min\n- Diseno de Barba: $15.000 - 30 min\n- Tratamiento Capilar Premium (adicional): $40.000 - 25 min\n- Masaje de Cuero Cabelludo (adicional): $5.000 - 15 min\n\nMETODOS DE PAGO:\n- Efectivo\n- Transferencia bancaria: Bancolombia, Nequi, NU\n- Propinas: aceptadas en efectivo\n\nPOLITICAS:\n- Cancelacion: sin costo\n- Reprogramacion: permitida hasta 24 horas antes, sin costo\n- Recordatorio: por WhatsApp 2 horas antes de la cita.\n- Privacidad: se guardan nombre, telefono, servicios y preferencias durante 2 meses.\n\nCANALES DE ATENCION:\n- WhatsApp: si\n- Llamadas: si\n\nFORMATO DE MENSAJES:\nCada mensaje del cliente viene precedido por dos lineas de metadatos entre corchetes:\n- Linea 1: nombre registrado (o 'NO REGISTRADO'), numero de whatsapp, total de citas previas\n- Linea 2: contexto temporal (dia y fecha de hoy, hora actual, fecha maxima permitida para agendar)\nUsa esa info para personalizar la atencion y para calcular fechas relativas.\n\nINTERPRETACION DE FECHAS (convierte siempre a formato YYYY-MM-DD antes de llamar herramientas):\n- 'hoy' -> fecha actual\n- 'mañana' -> fecha actual + 1 dia\n- 'pasado mañana' -> fecha actual + 2 dias\n- 'el lunes', 'el martes', etc -> proxima ocurrencia de ese dia de la semana\n- 'este viernes' -> el viernes de esta semana en curso\n- 'el viernes que viene' / 'el proximo viernes' -> el viernes de la siguiente semana\nNO le pidas al cliente que te diga la fecha en formato YYYY-MM-DD, tu la calculas.\n\nINTERPRETACION DE HORAS (convierte a formato HH:mm de 24h antes de llamar herramientas):\n- Contexto: la barberia abre 09:00-18:00 (sabado 10:00-18:00), descanso 12:00-14:00\n- 'a las 9', 'a las 10', 'a las 11' -> 09:00, 10:00, 11:00 (mañana)\n- 'a las 1', 'a las 2', 'a las 3', 'a las 4', 'a las 5', 'a las 6' -> 13:00, 14:00, 15:00, 16:00, 17:00, 18:00 (tarde)\n- 'a las 8 de la mañana' -> 08:00 (rechazar: aun no abrimos)\n- 'a las 7 u 8 de la noche' -> rechazar: ya cerramos a las 18:00\n- Si es ambiguo, pregunta al cliente si es mañana o tarde\n\nLIMITE DE AGENDAMIENTO Y CONSULTA:\n- El cliente puede agendar o consultar disponibilidad para HOY, MAÑANA y hasta 5 dias despues de hoy (rango: hoy a hoy+5)\n- No requiere anticipacion minima mas alla de los 20 min operativos; si hay un espacio libre hoy se puede agendar hoy\n- Rechaza cualquier fecha mayor a hoy+5 (ej: dentro de una semana, el mes que viene, dentro de 10 dias) respondiendo: 'Solo manejamos agenda para los proximos 5 dias. La fecha mas lejana disponible es [fecha maxima en formato dia DD de mes]. Te sirve alguna fecha dentro de ese rango?'\n- NO llames a ninguna herramienta si la fecha solicitada supera el limite\n\nFORMATO DE FECHAS EN RESPUESTAS AL CLIENTE:\n- Internamente (al llamar herramientas) usa siempre YYYY-MM-DD\n- Cuando le respondas al cliente NUNCA muestres el año ni el formato YYYY-MM-DD\n- Usa el formato en español: 'dia-de-la-semana DD de mes' (ej: 'lunes 10 de enero', 'viernes 5 de abril', 'sabado 22 de junio')\n- Meses en minuscula sin tilde: enero, febrero, marzo, abril, mayo, junio, julio, agosto, septiembre, octubre, noviembre, diciembre\n- Dias en minuscula sin tilde: lunes, martes, miercoles, jueves, viernes, sabado, domingo\n- Horas en formato 12h natural (ej: '4 de la tarde', '10 de la mañana', '2 de la tarde'), no '16:00'\n\nINSTRUCCIONES:\n1. SALUDO:\n   - Si el cliente tiene nombre registrado, saludale por su nombre.\n   - Si NO esta registrado (NO REGISTRADO), pidele su nombre de forma natural antes de continuar con su solicitud y usa la herramienta guardar_cliente para guardarlo.\n2. AGENDAR (cita, agendar, turno, reservar): usa el nombre ya registrado (no lo pidas de nuevo), interpreta la fecha y hora desde lenguaje natural y verifica el limite de 5 dias antes de llamar agendar_cita.\n3. CANCELAR (cancelar, anular, quitar): REGLA OBLIGATORIA: ANTES de cancelar DEBES llamar PRIMERO a la herramienta consultar_citas_usuario (no requiere parametros, ya conoce el numero del cliente). Con la respuesta:\n   - Si el cliente no tiene citas activas, informale que no hay nada que cancelar y no llames cancelar_cita.\n   - Si tiene UNA sola cita, confirmale los detalles (fecha y servicio) y al aceptar llama cancelar_cita con el nombre y la fecha ISO (YYYY-MM-DD) que te devolvio consultar_citas_usuario.\n   - Si tiene VARIAS citas, muestraselas de forma legible y preguntale cual quiere cancelar antes de llamar cancelar_cita.\n   Nunca inventes la fecha ni se la pidas al cliente si ya la puedes obtener de consultar_citas_usuario. Nunca saltes el paso de consultar_citas_usuario aunque el cliente te diga la fecha.\n4. DISPONIBILIDAD (hay espacio, cuando puedo, cuales horas): interpreta la fecha desde lenguaje natural, verifica el limite de 5 dias y usa herramienta consultar_disponibilidad.\n5. INFORMACION (precio, horario, donde, servicios): responde directamente con los datos de arriba.\n\nREGLAS:\n- Sin emojis\n- Amable y profesional\n- Si el cliente ya tiene nombre registrado, NO se lo vuelvas a preguntar\n- Solo usa guardar_cliente la primera vez que obtengas el nombre o si el cliente pide cambiarlo\n- Confirma los datos antes de ejecutar cualquier herramienta de agendar/cancelar\n- No reveles datos de otros clientes\n- Si no puedes resolver, deriva al 3334324220",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        14624,
+        3488
+      ],
+      "id": "98c9f898-0fe3-4dd2-806e-56b6323a3481",
+      "name": "Prompt del sistema"
+    },
+    {
+      "parameters": {
+        "content": "## Promt del sistema\n\n- Informacion del negocion\n- Horarios del negocio\n- Reglas del negocio\n- Herramientas y Funcionalidades",
+        "height": 176,
+        "width": 336
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        14528,
+        3664
+      ],
+      "typeVersion": 1,
+      "id": "3fc5f2c0-caa9-4f53-9804-fd63f81884bf",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Deteccion de intencion\n\nPalabras claves para\nque el sistema de IA\nclasifique el mensaje\ny con respecto a la intension \nactue de manera optima",
+        "height": 176,
+        "width": 336
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        14000,
+        3248
+      ],
+      "typeVersion": 1,
+      "id": "c87ca55d-99b9-4d13-be99-77e0c7275881",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "016467f4-098c-4453-bfef-e381439122b3",
+              "name": "intencion",
+              "value": "['hola','buenos dias','buenas tardes','buenas noches','buenas',\n  'precio','precios','costo','cuanto cuesta','cuanto vale',\n  'horario','horarios','a que hora abren','a que hora cierran',\n  'donde','direccion','ubicacion','donde quedan',\n  'servicios','que servicios','que ofrecen',\n  'como pago','metodos de pago','formas de pago',\n  'telefono','gracias','muchas gracias','ok','vale','listo','chao','adios']",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        14176,
+        3488
+      ],
+      "id": "9950c50d-dfab-4ecc-834b-fd38b0046d66",
+      "name": "Intension"
+    },
+    {
+      "parameters": {
+        "content": "## Deteccion de herramienta\n\n\nPalabras claves para\nque el sistema de IA\nentienda que herramienta \nse puede usar",
+        "height": 176,
+        "width": 336
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        14352,
+        3248
+      ],
+      "typeVersion": 1,
+      "id": "90f7c2a8-581e-4d82-8f3b-f507899848b6",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "016467f4-098c-4453-bfef-e381439122b3",
+              "name": "herramienta",
+              "value": "['cita','agendar','reservar','turno','cancelar','anular',\n  'disponib','hay espacio','cuando puedo','que horas hay','nombre']",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        14400,
+        3488
+      ],
+      "id": "7518b221-d763-4058-bb0d-d143adb78a6e",
+      "name": "herramienta"
     }
   ],
   "pinData": {},
@@ -543,6 +691,17 @@
         ]
       ]
     },
+    "Tool Consultar Citas Usuario": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Barberia",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Extraer Mensaje": {
       "main": [
         [
@@ -569,7 +728,7 @@
       "main": [
         [
           {
-            "node": "Detectar Intento",
+            "node": "Intension",
             "type": "main",
             "index": 0
           }
@@ -664,6 +823,39 @@
           }
         ]
       ]
+    },
+    "Prompt del sistema": {
+      "main": [
+        [
+          {
+            "node": "Detectar Intento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intension": {
+      "main": [
+        [
+          {
+            "node": "herramienta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "herramienta": {
+      "main": [
+        [
+          {
+            "node": "Prompt del sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -671,7 +863,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "77d54ee2-d18a-446b-a611-faf14e94a464",
+  "versionId": "9dc5c84c-35c7-4147-b0c5-fc943db934f1",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6948377d4c74747a8c6fcaab5db2c8cdcae1b2467cadfae487118881de798aaa"
