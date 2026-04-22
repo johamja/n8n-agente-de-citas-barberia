@@ -356,7 +356,11 @@
         "returnAll": true,
         "timeMin": "={{ $json.fecha }}T00:00:00-05:00",
         "timeMax": "={{ $json.fecha }}T23:59:59-05:00",
-        "options": {}
+        "options": {
+          "singleEvents": true,
+          "orderBy": "startTime",
+          "timeZone": "America/Bogota"
+        }
       },
       "id": "69b6a9f7-e5ec-4690-901a-2228d21d79f3",
       "name": "Listar Eventos Dia",
@@ -375,8 +379,7 @@
           "id": "3ByIT47jp9liExPL",
           "name": "Google Calendar account"
         }
-      },
-      "onError": "continueRegularOutput"
+      }
     },
     {
       "parameters": {
